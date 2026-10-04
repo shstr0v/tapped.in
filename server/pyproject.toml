@@ -1,0 +1,103 @@
+[build-system]
+requires = ["setuptools>=80.9.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[project]
+name = "VNU"
+version = "0.1.0"
+description = "A VNU server"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "aiogram>=3.23.0",
+    "aiosmtplib>=5.1.0",
+    "alembic>=1.18.4",
+    "alembic-postgresql-enum>=1.10.0",
+    "argon2-cffi>=25.1.0",
+    "asyncpg>=0.31.0",
+    "boto3>=1.42.96",
+    "dishka>=1.10.1",
+    "fastapi>=0.136.1",
+    "greenlet>=3.4.0",
+    "mailchimp-marketing>=3.0.80",
+    "orjson>=3.11.8",
+    "pip>=26.0.1",
+    "python-dotenv>=1.1.1",
+    "python-jose>=3.5.0",
+    "redis>=7.4.0",
+    "sqlalchemy>=2.0.49",
+    "stripe>=15.1.0",
+    "taskiq>=0.12.2",
+    "taskiq-redis>=1.2.2",
+    "uvicorn>=0.46.0",
+]
+
+
+authors = [
+    {name = "Mikhail Shesterov", email = "shesterovmm@gmail.com"}
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+
+[project.optional-dependencies]
+test = [
+    "pytest",
+    "pytest-asyncio>=1.0.0",
+]
+lint = [
+    "ruff>=0.11.10",
+    "flake8>=7.2.0",
+]
+
+[tool.uv.workspace]
+members = [
+    "server",
+]
+
+[tool.ruff]
+line-length = 120
+include = ["pyproject.toml", "src/**/*.py", "tests/**/*.py"]
+exclude = ["src/vnu/adapters/data/migrations/**/*.py"]
+
+[tool.ruff.lint]
+select = ['ALL']
+
+ignore = [
+    # Strange and obscure
+    'D100',
+    'D104',
+    'D101',
+    'D105',
+    'D102',
+    'RET504',
+    'D103',
+    'PLR0913',
+    'S101',
+    'EM101',
+    'TRY003',
+    'D107',
+    'D212',
+    'D203',
+    'COM812',
+    'ARG001',
+    'TC002',
+    'ARG002',
+    'RUF001',
+    'PLR0912',
+    'C901',
+    'PGH003',
+    'PLR2004',
+    'ASYNC230',
+    'ERA001',
+    'A005',
+    'A002',
+    # Does not work correctly
+    'S104',
+    'ANN401',
+    'TRY300',
+    'S311'
+]

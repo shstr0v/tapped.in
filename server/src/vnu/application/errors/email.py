@@ -1,0 +1,6 @@
+class EmailError(Exception):
+    ...
+
+
+class EmailSendingError(EmailError):
+    ...

@@ -1,0 +1,77 @@
+services:
+  api:
+    extends:
+      file: docker-compose.base.yml
+      service: backend
+    container_name: api
+    env_file: .env
+    environment:
+      - DB_HOST=postgresql
+    networks:
+      - appnet
+
+  unit:
+    extends:
+      file: docker-compose.base.yml
+      service: code
+    container_name: unit
+    restart: no
+    command: pytest -v -s
+    env_file: .env
+    environment:
+      - DB_HOST=postgresql
+    depends_on:
+      - postgresql
+    networks:
+      - appnet
+
+  e2e:
+    image: postman/newman:6-alpine
+    container_name: e2e
+    volumes:
+      - ./.config/postman/e2e:/etc/newman/e2e
+    networks:
+      - appnet
+    depends_on:
+      - api
+    command: >
+      run /etc/newman/e2e/e2e.postman_collection.json
+      --environment=/etc/newman/e2e/local-docker.postman_environment.json
+
+  postgresql:
+    extends:
+      file: docker-compose.base.yml
+      service: postgresql
+    networks:
+      - appnet
+
+  redis:
+    extends:
+      file: docker-compose.base.yml
+      service: redis
+    networks:
+      - appnet
+
+  worker:
+    extends:
+      file: docker-compose.base.yml
+      service: worker
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  scheduler:
+    extends:
+      file: docker-compose.base.yml
+      service: scheduler
+    depends_on:
+      redis:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+
+networks:
+  appnet:
+    driver: bridge
+    name: appnet

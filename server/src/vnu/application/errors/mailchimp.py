@@ -1,0 +1,6 @@
+class MailchimpError(Exception):
+    ...
+
+
+class MailchimpRequestError(MailchimpError):
+    ...

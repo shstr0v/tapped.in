@@ -1,0 +1,48 @@
+services:
+  backend:
+    extends:
+      file: docker-compose.base.yml
+      service: backend
+    depends_on:
+      - postgresql
+      - redis
+    networks:
+      - appnet
+
+  postgresql:
+    extends:
+      file: docker-compose.base.yml
+      service: postgresql
+    volumes:
+      - ./.config/dev/postgresql/seed.sql:/docker-entrypoint-initdb.d/seed.sql
+    networks:
+      - appnet
+
+  redis:
+    extends:
+      file: docker-compose.base.yml
+      service: redis
+    networks:
+      - appnet
+
+  worker:
+    extends:
+      file: docker-compose.base.yml
+      service: worker
+    depends_on:
+      - redis
+
+  scheduler:
+    extends:
+      file: docker-compose.base.yml
+      service: scheduler
+    depends_on:
+      - redis
+
+volumes:
+  pgdata:
+
+networks:
+  appnet:
+    driver: bridge
+    name: appnet

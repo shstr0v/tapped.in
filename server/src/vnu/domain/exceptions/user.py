@@ -1,0 +1,19 @@
+from vnu.domain.common.exception import ValidationError
+
+
+class InvalidUsernameError(ValidationError): ...
+
+
+class WeakPasswordError(ValidationError): ...
+
+
+class InvalidEmailAddressError(ValidationError): ...
+
+
+class InvalidUserFullnameError(ValidationError): ...
+
+
+class InvalidPhoneNumberError(ValidationError): ...
+
+
+class InvalidUserAgeError(ValidationError): ...

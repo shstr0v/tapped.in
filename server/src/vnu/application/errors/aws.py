@@ -1,0 +1,6 @@
+class AwsError(Exception):
+    ...
+
+
+class PresignedUrlError(AwsError):
+    ...
