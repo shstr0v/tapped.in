@@ -91,34 +91,28 @@ export function WaitlistForm({ variant = "light" }: WaitlistFormProps) {
           onChange={(event) => setEmail(event.target.value)}
           autoComplete="email"
           placeholder="artist@studio.com"
-          className={`min-h-14 min-w-0 flex-1 rounded-[1.15rem] border px-5 text-base outline-none transition-[border-color,box-shadow,background-color] duration-150 ease-out ${
-            isDark
-              ? "border-white/10 bg-white text-ink placeholder:text-ink/35 focus:border-blue focus:shadow-focus"
-              : "border-transparent bg-white text-ink placeholder:text-ink/35 focus:border-blue focus:shadow-focus"
+          className={`min-h-14 min-w-0 flex-1 rounded-[20px] border bg-white px-5 text-base text-ink outline-none transition-[border-color,box-shadow] duration-150 ease-out placeholder:text-ink/35 focus:border-blue focus:shadow-focus ${
+            isDark ? "border-white/10" : "border-transparent"
           }`}
         />
         <button
           type="submit"
           disabled={isSubmitting}
-          className={`pressable inline-flex min-h-14 items-center justify-center gap-2 rounded-[1.15rem] px-6 text-base font-black transition-[background-color,color,transform,opacity] duration-150 ease-out disabled:pointer-events-none disabled:opacity-60 ${
-            isDark
-              ? "bg-blue text-white hover:bg-blue-dark"
-              : "bg-ink text-white hover:bg-blue"
-          }`}
+          className="pressable waitlist-submit"
         >
+          {isSubmitting ? "Joining…" : "Join waitlist"}
           {isSubmitting ? (
             <Loader2 className="size-4 animate-spin" aria-hidden="true" />
           ) : (
             <ArrowRight className="size-4" aria-hidden="true" />
           )}
-          {isSubmitting ? "Joining" : "Join TappedIn"}
         </button>
       </div>
       <p
         className={`min-h-6 px-1 pt-2 text-sm ${
           submitState.status === "success"
             ? isDark
-              ? "text-sky-soft"
+              ? "text-blue-soft"
               : "text-blue"
             : isDark
               ? "text-white/65"
@@ -128,7 +122,7 @@ export function WaitlistForm({ variant = "light" }: WaitlistFormProps) {
         aria-live="polite"
       >
         {submitState.message ||
-          "No spam. Just early access and product updates."}
+          "One email when your invite is ready. That's it."}
       </p>
     </form>
   );

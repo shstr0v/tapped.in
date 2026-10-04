@@ -31,7 +31,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="h-full scroll-smooth">
-      <body className="min-h-full bg-background font-body antialiased">
+      <body className="min-h-full bg-cream font-body antialiased">
         {children}
       </body>
     </html>
