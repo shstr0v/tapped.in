@@ -112,7 +112,7 @@ export function WelcomePage() {
 
           <View style={{ paddingTop: compact ? 22 : 34, width: "100%" }}>
             <View style={{ gap: 12, width: "100%" }}>
-              <WelcomeButton onPress={() => router.replace("/(tabs)/feed")} variant="primary">
+              <WelcomeButton onPress={() => router.push("/(auth)/sign-up")} variant="primary">
                 Create a new Account
               </WelcomeButton>
               <WelcomeButton onPress={() => router.push("/(auth)/sign-in")} variant="secondary">

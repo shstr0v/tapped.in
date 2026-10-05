@@ -1,4 +1,5 @@
 from vnu.application.queries.music.connections import ListConnections
+from vnu.application.queries.music.conversations import ListConversations, ListMessages
 from vnu.application.queries.music.feedback import ListReceivedFeedback
 from vnu.application.queries.music.notifications import ListNotifications
 from vnu.application.queries.music.profile import GetMusicProfileById, GetMyMusicProfile
@@ -12,6 +13,8 @@ __all__ = [
     "GetRecommendationFeed",
     "GetRecommendationScore",
     "ListConnections",
+    "ListConversations",
+    "ListMessages",
     "ListMyUploads",
     "ListNotifications",
     "ListReceivedFeedback",

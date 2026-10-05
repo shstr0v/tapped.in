@@ -24,9 +24,8 @@ export function clearApiSessionHandlers() {
   sessionClearer = null;
 }
 
-export async function resolveSessionCookie() {
-  const sid = await sessionSidResolver?.();
-  return sid ? `sid=${sid}` : null;
+export async function resolveSessionSid() {
+  return (await sessionSidResolver?.()) ?? null;
 }
 
 export async function persistSessionSid(sid: string) {

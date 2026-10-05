@@ -1,13 +1,17 @@
 import uuid
+from datetime import datetime
 from uuid import UUID
 
 from sqlalchemy import delete, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from vnu.adapters.data.dao.music import MusicDAOImpl
 from vnu.adapters.data.models import (
     ConnectionModel,
+    ConversationModel,
     FeedbackModel,
+    MessageModel,
     MusicIdentityModel,
     MusicProfileModel,
     MusicUploadModel,
@@ -27,7 +31,9 @@ from vnu.application.dto.music import (
 )
 from vnu.domain.entities.music.entities import (
     Connection,
+    Conversation,
     Feedback,
+    Message,
     MusicIdentity,
     MusicProfile,
     MusicUpload,
@@ -40,6 +46,7 @@ from vnu.domain.entities.music.enums import (
     ExperienceLevelEnum,
     MusicProfileRoleEnum,
 )
+from vnu.domain.entities.music.value_objects import ordered_user_ids
 
 
 class MusicRepositoryImpl(MusicRepository):
@@ -200,6 +207,87 @@ class MusicRepositoryImpl(MusicRepository):
         )
         notification = result.scalar_one_or_none()
         return self.dao.to_notification_dto(notification) if notification else None
+
+    async def get_conversation(self, conversation_id: UUID) -> Conversation | None:
+        result = await self.session.execute(
+            select(ConversationModel).where(ConversationModel.id == conversation_id)
+        )
+        conversation = result.scalar_one_or_none()
+        return self._to_conversation_entity(conversation) if conversation else None
+
+    async def get_conversation_between_users(self, first_user_id: UUID, second_user_id: UUID) -> Conversation | None:
+        user_1_id, user_2_id = ordered_user_ids(first_user_id, second_user_id)
+        result = await self.session.execute(
+            select(ConversationModel).where(
+                ConversationModel.user_1_id == user_1_id,
+                ConversationModel.user_2_id == user_2_id,
+            )
+        )
+        conversation = result.scalar_one_or_none()
+        return self._to_conversation_entity(conversation) if conversation else None
+
+    async def save_conversation(self, conversation: Conversation) -> Conversation:
+        model = ConversationModel(
+            id=conversation.id,
+            user_1_id=conversation.user_1_id,
+            user_2_id=conversation.user_2_id,
+            created_at=conversation.created_at,
+            updated_at=conversation.updated_at,
+            last_message_at=conversation.last_message_at,
+        )
+        try:
+            async with self.session.begin_nested():
+                self.session.add(model)
+                await self.session.flush()
+        except IntegrityError:
+            if model in self.session:
+                self.session.expunge(model)
+            existing = await self.get_conversation_between_users(conversation.user_1_id, conversation.user_2_id)
+            if existing is None:
+                raise
+            return existing
+        return conversation
+
+    async def save_message(self, message: Message) -> None:
+        self.session.add(
+            MessageModel(
+                id=message.id,
+                conversation_id=message.conversation_id,
+                sender_id=message.sender_id,
+                type=message.type.value,
+                text=message.text,
+                beat_id=message.beat_id,
+                created_at=message.created_at,
+                read_at=message.read_at,
+            )
+        )
+        await self.session.flush()
+        await self.session.execute(
+            update(ConversationModel)
+            .where(ConversationModel.id == message.conversation_id)
+            .values(last_message_at=message.created_at, updated_at=message.created_at)
+        )
+
+    async def mark_conversation_read(self, conversation_id: UUID, reader_user_id: UUID, read_at: datetime) -> None:
+        await self.session.execute(
+            update(MessageModel)
+            .where(
+                MessageModel.conversation_id == conversation_id,
+                MessageModel.sender_id != reader_user_id,
+                MessageModel.read_at.is_(None),
+            )
+            .values(read_at=read_at)
+        )
+
+    def _to_conversation_entity(self, conversation: ConversationModel) -> Conversation:
+        return Conversation(
+            id=conversation.id,
+            user_1_id=conversation.user_1_id,
+            user_2_id=conversation.user_2_id,
+            created_at=conversation.created_at,
+            updated_at=conversation.updated_at,
+            last_message_at=conversation.last_message_at,
+        )
 
     async def _replace_identity(self, profile_id: UUID, identity: MusicIdentityInputDTO | None) -> None:
         if identity is None:

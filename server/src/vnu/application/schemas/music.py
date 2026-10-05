@@ -1,12 +1,14 @@
+from typing import Self
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
-from vnu.application.dto.music import MusicIdentityInputDTO, SocialLinkInputDTO
+from vnu.application.dto.music import MusicIdentityInputDTO, SendMessageDTO, SocialLinkInputDTO
 from vnu.domain.entities.music.enums import (
     CollaborationStatusEnum,
     ExperienceLevelEnum,
     FeedbackCategoryEnum,
+    MessageTypeEnum,
     MusicProfileRoleEnum,
     SocialPlatformEnum,
     SwipeActionEnum,
@@ -95,3 +97,37 @@ class CreateFeedbackRequest(BaseModel):
     category: FeedbackCategoryEnum
     quick_reaction: str | None = None
     text: str | None = None
+
+
+class SendMessageRequest(BaseModel):
+    type: MessageTypeEnum
+    text: str | None = Field(default=None, max_length=2000)
+    beat_id: UUID | None = None
+
+    @model_validator(mode="after")
+    def validate_payload(self) -> Self:
+        if self.type == MessageTypeEnum.TEXT:
+            text = (self.text or "").strip()
+            if not text:
+                message = "Text messages require non-empty text."
+                raise ValueError(message)
+            self.text = text
+            if self.beat_id is not None:
+                message = "Text messages cannot include a beat."
+                raise ValueError(message)
+            return self
+        if self.beat_id is None:
+            message = "Beat messages require beat_id."
+            raise ValueError(message)
+        if self.text is not None and self.text.strip():
+            message = "Beat messages cannot include text."
+            raise ValueError(message)
+        return self
+
+    def to_dto(self, conversation_id: UUID) -> SendMessageDTO:
+        return SendMessageDTO(
+            conversation_id=conversation_id,
+            type=self.type,
+            text=self.text if self.type == MessageTypeEnum.TEXT else None,
+            beat_id=self.beat_id if self.type == MessageTypeEnum.BEAT else None,
+        )

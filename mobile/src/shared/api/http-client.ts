@@ -1,6 +1,6 @@
 import { API_URL } from "@/shared/config/env";
 
-import { resolveSessionCookie } from "./session-handlers";
+import { resolveSessionSid } from "./session-handlers";
 
 type QueryValue = boolean | number | string | null | undefined;
 
@@ -76,9 +76,9 @@ export async function apiRequest<TResponse>(
   }
 
   if (auth) {
-    const cookie = await resolveSessionCookie();
-    if (cookie) {
-      headers.set("Cookie", cookie);
+    const sid = await resolveSessionSid();
+    if (sid) {
+      headers.set("Authorization", `Bearer ${sid}`);
     }
   }
 

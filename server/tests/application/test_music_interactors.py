@@ -79,6 +79,13 @@ class FakeMusicDAO:
             if profile.id != viewer_profile_id and profile.featured_upload is not None
         ]
 
+    async def list_like_edges(self) -> list[tuple[UUID, UUID]]:
+        return [
+            (actor_id, target_id)
+            for (actor_id, target_id), action in self.swipes.items()
+            if action in {SwipeActionEnum.LIKE, SwipeActionEnum.SAVE}
+        ]
+
 
 class FakeMusicRepository:
     def __init__(self, dao: FakeMusicDAO) -> None:

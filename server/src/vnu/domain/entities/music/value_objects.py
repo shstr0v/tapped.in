@@ -3,6 +3,7 @@ from uuid import UUID
 
 from vnu.domain.common.value_object import UID, URL, Timestamp, ValueObject
 from vnu.domain.exceptions.music import (
+    InvalidMessageError,
     InvalidMusicInteractionError,
     InvalidMusicProfileError,
     InvalidMusicUploadError,
@@ -155,3 +156,10 @@ class UpdatedAt(Timestamp): ...
 def ensure_different_profiles(first_profile_id: UUID, second_profile_id: UUID) -> None:
     if first_profile_id == second_profile_id:
         raise InvalidMusicInteractionError("Self interaction is not allowed.")
+
+
+def ordered_user_ids(first_user_id: UUID, second_user_id: UUID) -> tuple[UUID, UUID]:
+    if first_user_id == second_user_id:
+        raise InvalidMessageError("You cannot start a conversation with yourself.")
+    left, right = sorted((first_user_id, second_user_id), key=str)
+    return left, right

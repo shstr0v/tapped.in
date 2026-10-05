@@ -1,4 +1,5 @@
 from abc import abstractmethod
+from datetime import datetime
 from typing import Protocol
 from uuid import UUID
 
@@ -11,7 +12,16 @@ from vnu.application.dto.music import (
     NotificationDTO,
     SocialLinkInputDTO,
 )
-from vnu.domain.entities.music.entities import Connection, Feedback, MusicProfile, MusicUpload, Notification, Swipe
+from vnu.domain.entities.music.entities import (
+    Connection,
+    Conversation,
+    Feedback,
+    Message,
+    MusicProfile,
+    MusicUpload,
+    Notification,
+    Swipe,
+)
 
 
 class MusicRepository(Protocol):
@@ -75,4 +85,24 @@ class MusicRepository(Protocol):
 
     @abstractmethod
     async def mark_notification_read(self, notification_id: UUID, user_id: UUID) -> NotificationDTO | None:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_conversation(self, conversation_id: UUID) -> Conversation | None:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_conversation_between_users(self, first_user_id: UUID, second_user_id: UUID) -> Conversation | None:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def save_conversation(self, conversation: Conversation) -> Conversation:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def save_message(self, message: Message) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def mark_conversation_read(self, conversation_id: UUID, reader_user_id: UUID, read_at: datetime) -> None:
         raise NotImplementedError

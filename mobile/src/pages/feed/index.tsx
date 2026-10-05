@@ -1,22 +1,23 @@
-import { type ReactNode, useEffect, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
 import { useRouter } from "expo-router";
-import {
-  Image,
-  ImageBackground,
-  Pressable,
-  View,
-  useWindowDimensions,
-} from "react-native";
+import { Pause, Play } from "lucide-react-native";
+import { Image, ImageBackground, Pressable, View, useWindowDimensions } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Screen } from "@/components/layout/screen";
-import { Text } from "@/components/ui";
+import { TAB_BAR_BODY_HEIGHT } from "@/widgets/navigation";
+import { Avatar, Text } from "@/components/ui";
 import type { RecommendationCard } from "@/entities/recommendation";
-import AudioPreviewSource from "../../../assets/audio.mp3";
+import { useSwipeProfile } from "@/features/feed/swipe-profile";
+import { profilesApi, recommendationsApi } from "@/shared/api";
+import type { SwipeAction } from "@/shared/api/endpoints/swipes";
 import ConnectIcon from "../../../assets/icons/connect.svg";
 import NotificationIcon from "../../../assets/icons/notifications.svg";
 import RejectIcon from "../../../assets/icons/reject.svg";
 import SearchIcon from "../../../assets/icons/search.svg";
+import { FeedNotice, FeedSkeleton } from "./ui/feed-states";
 import LogoSource from "../../../assets/logo.png";
 import RapperImageTwo from "../../../assets/rappers/image copy 2.png";
 import RapperImageOne from "../../../assets/rappers/image copy.png";
@@ -30,122 +31,21 @@ const CARD_ASPECT_RATIO = 0.52;
 const CARD_TOP_GAP = 20;
 const ACTION_TOP_GAP = 16;
 const MAX_CONTENT_WIDTH = 430;
+const FEED_PAGE_SIZE = 20;
+const PREFETCH_THRESHOLD = 3;
 
 const rapperImages = [RapperImageOne, RapperImageTwo, RapperImageThree] as const;
 
-const demoCards: RecommendationCard[] = [
-  {
-    match: {
-      breakdown: {
-        genres: 35,
-        influences: 28,
-        location: 8,
-        type_beats: 18,
-      },
-      reasons: ["Same rage/trap lane", "Inspired by Carti and Ken Carson", "Open to local sessions"],
-      score: 80,
-    },
-    profile: {
-      id: "demo-profile-1",
-      image_url: null,
-      preview_beat: {
-        audio_url: "https://example.com/demo.mp3",
-        bpm: 145,
-        description: "Dark rage beat with bright lead melodies.",
-        genre: "Rage",
-        id: "demo-upload-1",
-        tags: ["hip-hop", "rage", "ken carson"],
-        title: "Neon Knock",
-      },
-      user_account: {
-        avatar_url: null,
-        bio: "Rapper looking for fast, distorted production and local sessions.",
-        collaboration_status: "open",
-        experience_level: "intermediate",
-        id: "demo-user-1",
-        location: "Atlanta, US",
-        name: "Kairo Beats",
-        profile_id: "demo-profile-1",
-        role: "artist",
-        tags: ["hip-hop", "rage", "ken carson"],
-      },
-    },
-  },
-  {
-    match: {
-      breakdown: {
-        genres: 32,
-        influences: 25,
-        location: 10,
-        type_beats: 15,
-      },
-      reasons: ["Shared melodic trap taste", "Similar BPM range", "Looking for producers"],
-      score: 74,
-    },
-    profile: {
-      id: "demo-profile-2",
-      image_url: null,
-      preview_beat: {
-        audio_url: "https://example.com/demo-2.mp3",
-        bpm: 132,
-        description: "Hook idea over a soft trap bounce.",
-        genre: "Melodic Trap",
-        id: "demo-upload-2",
-        tags: ["melodic", "trap", "hooks"],
-        title: "Late Text Demo",
-      },
-      user_account: {
-        avatar_url: null,
-        bio: "Artist writing melodic hooks and looking for long-term producer chemistry.",
-        collaboration_status: "looking_for_producers",
-        experience_level: "beginner",
-        id: "demo-user-2",
-        location: "Cluj, RO",
-        name: "Mira V",
-        profile_id: "demo-profile-2",
-        role: "artist",
-        tags: ["melodic", "trap", "hooks"],
-      },
-    },
-  },
-  {
-    match: {
-      breakdown: {
-        genres: 30,
-        influences: 24,
-        location: 9,
-        type_beats: 17,
-      },
-      reasons: ["Shared underground lane", "Dark trap references", "Available for sessions"],
-      score: 77,
-    },
-    profile: {
-      id: "demo-profile-3",
-      image_url: null,
-      preview_beat: {
-        audio_url: "https://example.com/demo-3.mp3",
-        bpm: 148,
-        description: "Minimal drums with a cold synth loop.",
-        genre: "Dark Trap",
-        id: "demo-upload-3",
-        tags: ["dark trap", "ambient", "hoodie"],
-        title: "Cold Wall",
-      },
-      user_account: {
-        avatar_url: null,
-        bio: "Rapper looking for darker beats and low-key visuals.",
-        collaboration_status: "open",
-        experience_level: "intermediate",
-        id: "demo-user-3",
-        location: "New York, US",
-        name: "Rell",
-        profile_id: "demo-profile-3",
-        role: "artist",
-        tags: ["dark trap", "ambient", "hoodie"],
-      },
-    },
-  },
-];
+function stopPlayback(player: { pause: () => void }) {
+  player.pause();
+  const media = (player as { media?: { pause: () => void; src: string; load: () => void } }).media;
+  if (!media) {
+    return;
+  }
+  media.pause();
+  media.src = "";
+  media.load();
+}
 
 type HomeIconButtonProps = {
   children: ReactNode;
@@ -180,55 +80,124 @@ function HomeIconButton({ children, label, onPress, size, tone }: HomeIconButton
   );
 }
 
-export function FeedPage() {
-  const router = useRouter();
-  const [index, setIndex] = useState(0);
-  const { height, width } = useWindowDimensions();
-  const card = demoCards[index % demoCards.length];
-  const profile = card.profile.user_account;
-  const rapperImage = rapperImages[index % rapperImages.length];
-  const nextCard = () => setIndex((value) => value + 1);
-  const previewAudioSource = card.profile.preview_beat.audio_url.includes("example.com")
-    ? AudioPreviewSource
-    : card.profile.preview_beat.audio_url;
-  const previewPlayer = useAudioPlayer(previewAudioSource, { updateInterval: 500 });
-  const previewStatus = useAudioPlayerStatus(previewPlayer);
+function useFeedQueue() {
+  const feedQuery = useQuery({
+    queryFn: () => recommendationsApi.feed({ limit: FEED_PAGE_SIZE }),
+    queryKey: ["recommendations", "feed"],
+  });
+  const [queue, setQueue] = useState<RecommendationCard[]>([]);
+  const handledIds = useRef(new Set<string>());
 
   useEffect(() => {
-    if (!previewStatus.isLoaded) {
+    if (!feedQuery.data) {
       return;
     }
 
-    let cancelled = false;
+    setQueue((current) => {
+      const queuedIds = new Set(current.map((card) => card.profile.id));
+      const fresh = feedQuery.data.filter(
+        (card) => !queuedIds.has(card.profile.id) && !handledIds.current.has(card.profile.id),
+      );
 
-    const restartPreview = async () => {
-      previewPlayer.pause();
-      try {
-        await previewPlayer.seekTo(0);
-      } catch {
-        // Keep feed usable if a native player rejects a fast seek.
-      }
-      if (!cancelled) {
-        previewPlayer.play();
-      }
+      return fresh.length ? [...current, ...fresh] : current;
+    });
+  }, [feedQuery.data]);
+
+  const { isFetching, refetch } = feedQuery;
+
+  useEffect(() => {
+    if (feedQuery.isSuccess && queue.length <= PREFETCH_THRESHOLD && !isFetching) {
+      void refetch();
+    }
+    // Only react to the queue shrinking, not to every fetch status change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queue.length]);
+
+  const dismiss = useCallback((profileId: string) => {
+    handledIds.current.add(profileId);
+    setQueue((current) => current.filter((card) => card.profile.id !== profileId));
+  }, []);
+
+  return { dismiss, feedQuery, queue };
+}
+
+export function FeedPage() {
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { height, width } = useWindowDimensions();
+  const { dismiss, feedQuery, queue } = useFeedQueue();
+  const swipe = useSwipeProfile();
+  const me = useQuery({
+    queryFn: () => profilesApi.getMe(),
+    queryKey: ["profiles", "me"],
+  });
+  const [swipeCount, setSwipeCount] = useState(0);
+
+  const card = queue[0] ?? null;
+  const profile = card?.profile.user_account;
+  const previewBeat = card?.profile.preview_beat ?? null;
+  const imageUrl = card?.profile.image_url ?? profile?.avatar_url ?? null;
+  const cardImage = imageUrl ? { uri: imageUrl } : rapperImages[swipeCount % rapperImages.length];
+
+  const previewPlayer = useAudioPlayer(previewBeat?.audio_url ?? null, { updateInterval: 500 });
+  const previewStatus = useAudioPlayerStatus(previewPlayer);
+  const previewPlayerRef = useRef(previewPlayer);
+  previewPlayerRef.current = previewPlayer;
+
+  useLayoutEffect(() => {
+    const player = previewPlayer;
+    return () => {
+      stopPlayback(player);
     };
+  }, [previewPlayer]);
 
-    void restartPreview();
+  useEffect(() => {
+    if (!previewBeat?.audio_url || !previewStatus.isLoaded) {
+      return;
+    }
+
+    const player = previewPlayer;
+    player.seekTo(0);
+    player.play();
 
     return () => {
-      cancelled = true;
-      previewPlayer.pause();
+      player.pause();
     };
-  }, [index, previewPlayer, previewStatus.isLoaded]);
+  }, [card?.profile.id, previewBeat?.audio_url, previewPlayer, previewStatus.isLoaded]);
+
+  const handleSwipe = (action: SwipeAction) => {
+    if (!card) {
+      return;
+    }
+
+    stopPlayback(previewPlayerRef.current);
+    swipe.mutate({ action, target_profile_id: card.profile.id });
+    dismiss(card.profile.id);
+    setSwipeCount((value) => value + 1);
+  };
+
+  const togglePreview = () => {
+    if (previewStatus.playing) {
+      previewPlayer.pause();
+    } else {
+      previewPlayer.play();
+    }
+  };
 
   const metrics = useMemo(() => {
     const contentWidth = Math.max(288, Math.min(MAX_CONTENT_WIDTH, width - PAGE_PADDING * 2));
     const availableCardHeight =
-      height - PAGE_PADDING - HEADER_HEIGHT - CARD_TOP_GAP - ACTION_TOP_GAP - ACTION_BUTTON_SIZE - PAGE_PADDING;
-    const cardHeight = Math.max(
-      360,
-      Math.min(contentWidth / CARD_ASPECT_RATIO, availableCardHeight),
-    );
+      height -
+      insets.top -
+      PAGE_PADDING -
+      HEADER_HEIGHT -
+      CARD_TOP_GAP -
+      ACTION_TOP_GAP -
+      ACTION_BUTTON_SIZE -
+      PAGE_PADDING -
+      TAB_BAR_BODY_HEIGHT -
+      Math.max(insets.bottom, 8);
+    const cardHeight = Math.min(contentWidth / CARD_ASPECT_RATIO, Math.max(availableCardHeight, 0));
 
     return {
       cardHeight,
@@ -238,10 +207,13 @@ export function FeedPage() {
       searchFontSize: width < 360 ? 18 : 20,
       scoreFontSize: width < 360 ? 22 : 24,
     };
-  }, [height, width]);
+  }, [height, insets.bottom, insets.top, width]);
+
+  const isLoading = feedQuery.isPending || (!card && feedQuery.isFetching);
+  const retry = () => void feedQuery.refetch();
 
   return (
-    <Screen className="bg-white px-0 py-0" scroll={false}>
+    <Screen className="bg-white px-0 py-0" edges={["top", "left", "right"]} scroll={false}>
       <View
         className="flex-1 items-center"
         style={{
@@ -275,16 +247,7 @@ export function FeedPage() {
               width: 40,
             })}
           >
-            <Image
-              accessibilityIgnoresInvertColors
-              resizeMode="contain"
-              source={LogoSource}
-              style={{
-                borderRadius: 10,
-                height: 32,
-                width: 32,
-              }}
-            />
+            <Avatar name={me.data?.artist_name} size={32} uri={me.data?.avatar_url} />
           </Pressable>
 
           <View className="min-w-0 flex-1 flex-row items-center justify-center gap-2 px-3">
@@ -317,26 +280,38 @@ export function FeedPage() {
           </Pressable>
         </View>
 
+        {card && profile ? (
+          <>
+        <View style={{ marginTop: CARD_TOP_GAP }}>
         <ImageBackground
           className="overflow-hidden bg-[#EEEDE8]"
           imageStyle={{ borderRadius: metrics.cardRadius }}
           resizeMode="cover"
-          source={rapperImage}
+          source={cardImage}
           style={{
             borderRadius: metrics.cardRadius,
             height: metrics.cardHeight,
-            marginTop: CARD_TOP_GAP,
             overflow: "hidden",
             width: "100%",
           }}
         >
-          <View className="flex-1 justify-end">
-            <View className="gap-2.5 bg-black/55 px-4 pb-4 pt-3.5">
+          <Pressable
+            accessibilityLabel={`Open ${profile.name}'s profile`}
+            accessibilityRole="button"
+            onPress={() => router.push(`/profile/${card.profile.id}`)}
+            style={{ flex: 1 }}
+          />
+          <View className="gap-2.5 bg-black/55 px-4 pb-4 pt-3.5">
+            <Pressable
+              accessibilityLabel={`Open ${profile.name}'s profile`}
+              accessibilityRole="button"
+              onPress={() => router.push(`/profile/${card.profile.id}`)}
+            >
               <View className="flex-row items-center gap-3">
                 <Image
                   accessibilityIgnoresInvertColors
-                  resizeMode="contain"
-                  source={LogoSource}
+                  resizeMode={profile.avatar_url ? "cover" : "contain"}
+                  source={profile.avatar_url ? { uri: profile.avatar_url } : LogoSource}
                   style={{
                     backgroundColor: "rgba(255,255,255,0.2)",
                     borderColor: "rgba(255,255,255,0.2)",
@@ -350,12 +325,13 @@ export function FeedPage() {
                 <View className="min-w-0 flex-1">
                   <Text
                     className="font-bold text-white"
+                    numberOfLines={1}
                     style={{
                       fontSize: metrics.scoreFontSize,
                       lineHeight: metrics.scoreFontSize + 4,
                     }}
                   >
-                    {card.match.score * 10}pts
+                    {profile.name}
                   </Text>
                   <Text
                     className="font-medium text-white/85"
@@ -365,36 +341,114 @@ export function FeedPage() {
                       lineHeight: 18,
                     }}
                   >
-                    {profile.role === "artist" ? "Rapper" : "Producer"} • {profile.location}
+                    {[
+                      profile.role === "artist" ? "Rapper" : "Producer",
+                      profile.location,
+                      `${card.match.score * 10}pts`,
+                    ]
+                      .filter(Boolean)
+                      .join(" • ")}
                   </Text>
                 </View>
               </View>
 
-              <View className="flex-row flex-wrap gap-1.5">
-                {profile.tags.slice(0, 3).map((tag) => (
-                  <View className="rounded-full bg-white/35 px-2.5 py-1.5" key={tag}>
-                    <Text className="font-semibold text-white" style={{ fontSize: 12, lineHeight: 14 }}>
-                      {tag}
+              {profile.bio ? (
+                <Text
+                  className="text-white/85"
+                  numberOfLines={2}
+                  style={{ fontSize: 14, lineHeight: 18 }}
+                >
+                  {profile.bio}
+                </Text>
+              ) : null}
+
+              {profile.tags.length ? (
+                <View className="flex-row flex-wrap gap-1.5">
+                  {profile.tags.slice(0, 3).map((tag) => (
+                    <View className="rounded-full bg-white/35 px-2.5 py-1.5" key={tag}>
+                      <Text className="font-semibold text-white" style={{ fontSize: 12, lineHeight: 14 }}>
+                        {tag}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              ) : null}
+            </Pressable>
+
+              {previewBeat ? (
+                <Pressable
+                  accessibilityLabel={previewStatus.playing ? "Pause preview" : "Play preview"}
+                  accessibilityRole="button"
+                  className="flex-row items-center gap-3 rounded-2xl bg-white/20 p-2"
+                  onPress={togglePreview}
+                >
+                  <View className="h-9 w-9 items-center justify-center rounded-full bg-white">
+                    {previewStatus.playing ? (
+                      <Pause color="#050505" size={18} />
+                    ) : (
+                      <Play color="#050505" size={18} />
+                    )}
+                  </View>
+                  <View className="min-w-0 flex-1">
+                    <Text
+                      className="font-semibold text-white"
+                      numberOfLines={1}
+                      style={{ fontSize: 14, lineHeight: 18 }}
+                    >
+                      {previewBeat.title}
+                    </Text>
+                    <Text
+                      className="text-white/75"
+                      numberOfLines={1}
+                      style={{ fontSize: 12, lineHeight: 16 }}
+                    >
+                      {[previewBeat.genre, previewBeat.bpm ? `${previewBeat.bpm} BPM` : null]
+                        .filter(Boolean)
+                        .join(" • ") || "Featured work"}
                     </Text>
                   </View>
-                ))}
-              </View>
+                </Pressable>
+              ) : null}
             </View>
-          </View>
         </ImageBackground>
+        </View>
 
         <View
           className="flex-row items-center justify-center"
           style={{ gap: 36, paddingTop: ACTION_TOP_GAP }}
         >
-          <HomeIconButton label="Request" onPress={nextCard} size={ACTION_BUTTON_SIZE} tone="accept">
+          <HomeIconButton
+            label="Like"
+            onPress={() => handleSwipe("like")}
+            size={ACTION_BUTTON_SIZE}
+            tone="accept"
+          >
             <ConnectIcon height={ICON_SIZE} width={ICON_SIZE} />
           </HomeIconButton>
 
-          <HomeIconButton label="Reject" onPress={nextCard} size={ACTION_BUTTON_SIZE} tone="reject">
+          <HomeIconButton
+            label="Skip"
+            onPress={() => handleSwipe("skip")}
+            size={ACTION_BUTTON_SIZE}
+            tone="reject"
+          >
             <RejectIcon height={ICON_SIZE} width={ICON_SIZE} />
           </HomeIconButton>
         </View>
+          </>
+        ) : isLoading ? (
+          <View style={{ marginTop: CARD_TOP_GAP }}>
+            <FeedSkeleton
+              actionSize={ACTION_BUTTON_SIZE}
+              cardHeight={metrics.cardHeight}
+              cardRadius={metrics.cardRadius}
+            />
+          </View>
+        ) : (
+          <View className="flex-1 items-center justify-center px-4">
+            <FeedNotice kind={feedQuery.isError ? "error" : "empty"} onPress={retry} />
+          </View>
+        )}
         </View>
       </View>
     </Screen>

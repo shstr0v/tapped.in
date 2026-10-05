@@ -12,7 +12,8 @@ from vnu.application.dto.music import (
     RecommendationFiltersDTO,
 )
 from vnu.application.errors.music import MusicProfileNotFoundError
-from vnu.application.interactors.music.common import current_profile, match_score_for
+from vnu.application.interactors.music.common import current_profile
+from vnu.domain.entities.music.ranking import RankProfile, rank_profiles
 
 
 class GetRecommendationFeed(Query[RecommendationFiltersDTO, list[RecommendationCardDTO]]):
@@ -24,18 +25,26 @@ class GetRecommendationFeed(Query[RecommendationFiltersDTO, list[RecommendationC
         profile = await current_profile(self.dao, self.idp)
         candidates = await self.dao.list_recommendation_candidates(profile.id, data)
         candidates = [candidate for candidate in candidates if self._matches_filters(candidate, data)]
+        ranked = dict(
+            rank_profiles(
+                _features(profile),
+                [_features(candidate) for candidate in candidates],
+                await self.dao.list_like_edges(),
+            )
+        )
         cards = [
             RecommendationCardDTO(
                 profile=self._to_feed_profile(candidate),
                 match=MatchScoreDTO(
-                    score=(match := match_score_for(profile, candidate)).score,
-                    reasons=match.reasons,
-                    breakdown=match.breakdown,
+                    score=ranked[candidate.id].score,
+                    reasons=ranked[candidate.id].reasons,
+                    breakdown=ranked[candidate.id].breakdown,
                 ),
             )
             for candidate in candidates
+            if candidate.id in ranked
         ]
-        return sorted(cards, key=lambda card: card.match.score, reverse=True)[: data.limit]
+        return sorted(cards, key=lambda card: (-card.match.score, str(card.profile.id)))[: data.limit]
 
     def _matches_filters(self, profile: MusicProfileDTO, filters: RecommendationFiltersDTO) -> bool:
         if filters.genre is None:
@@ -102,5 +111,24 @@ class GetRecommendationScore(Query[GetMusicProfileDTO, MatchScoreDTO]):
         target = await self.dao.get_profile_by_id(data.profile_id)
         if target is None:
             raise MusicProfileNotFoundError("Music profile not found.")
-        match = match_score_for(profile, target)
+        ranked = rank_profiles(_features(profile), [_features(target)], await self.dao.list_like_edges())
+        match = ranked[0][1] if ranked else None
+        if match is None:
+            raise MusicProfileNotFoundError("Music profile not found.")
         return MatchScoreDTO(score=match.score, reasons=match.reasons, breakdown=match.breakdown)
+
+
+def _features(profile: MusicProfileDTO) -> RankProfile:
+    identity = profile.identity
+    return RankProfile(
+        profile_id=profile.id,
+        role=profile.role.value,
+        experience=profile.experience_level.value,
+        genres=list(identity.genres) if identity else [],
+        influences=list(identity.influences) if identity else [],
+        type_beats=list(identity.type_beats) if identity else [],
+        moods=list(identity.moods) if identity else [],
+        location=profile.location,
+        bpm_min=identity.bpm_min if identity else None,
+        bpm_max=identity.bpm_max if identity else None,
+    )

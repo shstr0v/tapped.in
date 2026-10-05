@@ -1,59 +1,90 @@
+import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
-import { Image, Pressable, View, useWindowDimensions } from "react-native";
+import { Image, Pressable, View, useWindowDimensions, type ImageSourcePropType } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Text } from "@/components/ui";
+import type { Notification } from "@/entities/notification";
+import { notificationsApi } from "@/shared/api";
 import ChevronIcon from "../../../assets/icons/chevron.svg";
-import TodayAvatar from "../../../assets/rappers/image copy.png";
-import YesterdayAvatar from "../../../assets/rappers/image copy 2.png";
+import EmptyNotifications from "../../../assets/illustarations/notifications-empty.jpg";
+import LogoSource from "../../../assets/logo.png";
 
 const PAGE_PADDING = 16;
 const MAX_CONTENT_WIDTH = 430;
 const BODY_FONT_SIZE = 16;
 
 type NotificationItem = {
-  avatar: typeof TodayAvatar;
+  avatar: ImageSourcePropType;
   id: string;
   isUnread: boolean;
   message: string;
 };
 
-const notificationGroups: { title: string; items: NotificationItem[] }[] = [
-  {
-    items: [
-      {
-        avatar: TodayAvatar,
-        id: "today-request",
-        isUnread: true,
-        message: "You’ve received a request!",
-      },
-      {
-        avatar: TodayAvatar,
-        id: "today-accepted",
-        isUnread: false,
-        message: "222blank has accepted your request",
-      },
-    ],
-    title: "Today",
-  },
-  {
-    items: [
-      {
-        avatar: YesterdayAvatar,
-        id: "yesterday-request",
-        isUnread: true,
-        message: "You’ve received a request!",
-      },
-      {
-        avatar: YesterdayAvatar,
-        id: "yesterday-accepted",
-        isUnread: false,
-        message: "222blank has accepted your request",
-      },
-    ],
-    title: "Yesterday",
-  },
-];
+const GROUP_TITLES = ["Today", "Yesterday", "Earlier"] as const;
+
+function messageFor(notification: Notification) {
+  return notification.type === "connection_accepted"
+    ? "Your connection request was accepted"
+    : "You have new feedback";
+}
+
+function groupNotifications(notifications: Notification[]) {
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const startOfYesterday = new Date(startOfToday);
+  startOfYesterday.setDate(startOfYesterday.getDate() - 1);
+
+  const groups = new Map<string, NotificationItem[]>();
+
+  notifications.forEach((notification) => {
+    const createdAt = new Date(notification.created_at);
+    const title =
+      createdAt >= startOfToday ? "Today" : createdAt >= startOfYesterday ? "Yesterday" : "Earlier";
+    const items = groups.get(title) ?? [];
+    items.push({
+      avatar: LogoSource,
+      id: notification.id,
+      isUnread: !notification.is_read,
+      message: messageFor(notification),
+    });
+    groups.set(title, items);
+  });
+
+  return GROUP_TITLES.filter((title) => groups.has(title)).map((title) => ({
+    items: groups.get(title) ?? [],
+    title,
+  }));
+}
+
+function NotificationsEmpty() {
+  return (
+    <View style={{ alignItems: "center", flex: 1, justifyContent: "center", paddingBottom: 48 }}>
+      <Image
+        accessibilityIgnoresInvertColors
+        resizeMode="contain"
+        source={EmptyNotifications}
+        style={{ height: 132, marginBottom: 16, width: 132 }}
+      />
+      <Text style={{ color: "#111111", fontSize: 22, fontWeight: "700", lineHeight: 27, textAlign: "center" }}>
+        No new notifications
+      </Text>
+      <Text
+        style={{
+          color: "#8F8F8F",
+          fontSize: 15,
+          fontWeight: "500",
+          lineHeight: 20,
+          marginTop: 6,
+          maxWidth: 280,
+          textAlign: "center",
+        }}
+      >
+        You're all caught up. We'll let you know when something happens.
+      </Text>
+    </View>
+  );
+}
 
 function NotificationRow({ item }: { item: NotificationItem }) {
   return (
@@ -119,6 +150,12 @@ export function NotificationsPage() {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const contentWidth = Math.max(288, Math.min(MAX_CONTENT_WIDTH, width - PAGE_PADDING * 2 - 2));
+  const notifications = useQuery({
+    queryFn: () => notificationsApi.list(),
+    queryKey: ["notifications"],
+  });
+  const notificationGroups = groupNotifications(notifications.data ?? []);
+  const isEmpty = notifications.isSuccess && notificationGroups.length === 0;
 
   return (
     <SafeAreaView className="flex-1 bg-white">
@@ -130,7 +167,7 @@ export function NotificationsPage() {
           paddingTop: 34,
         }}
       >
-        <View style={{ width: contentWidth }}>
+        <View style={{ flex: 1, width: contentWidth }}>
           <Pressable
             accessibilityLabel="Back"
             accessibilityRole="button"
@@ -154,6 +191,9 @@ export function NotificationsPage() {
             </Text>
           </Pressable>
 
+          {isEmpty ? (
+            <NotificationsEmpty />
+          ) : (
           <View style={{ gap: 28, paddingTop: 28 }}>
             {notificationGroups.map((group) => (
               <View key={group.title}>
@@ -177,6 +217,7 @@ export function NotificationsPage() {
               </View>
             ))}
           </View>
+          )}
         </View>
       </View>
     </SafeAreaView>

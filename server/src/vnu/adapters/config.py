@@ -10,6 +10,10 @@ load_dotenv(override=True)
 DEFAULT_CORS_ORIGINS = (
     "http://localhost:8081,http://127.0.0.1:8081,http://localhost:19006,http://localhost:5173"
 )
+DEFAULT_CORS_ORIGIN_REGEX = (
+    r"https?://(localhost|127\.0\.0\.1|0\.0\.0\.0|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|"
+    r"172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?"
+)
 
 
 def _is_running_in_docker() -> bool:
@@ -97,6 +101,7 @@ class Config:
     redis: RedisConfig
     sms: SmsConfig
     cors_origins: tuple[str, ...]
+    cors_origin_regex: str | None
 
     @classmethod
     def load_from_environment(cls) -> Self:
@@ -153,4 +158,5 @@ class Config:
             cors_origins=tuple(
                 origin.strip() for origin in os.getenv("CORS_ORIGINS", DEFAULT_CORS_ORIGINS).split(",") if origin.strip()
             ),
+            cors_origin_regex=os.getenv("CORS_ORIGIN_REGEX", DEFAULT_CORS_ORIGIN_REGEX) or None,
         )

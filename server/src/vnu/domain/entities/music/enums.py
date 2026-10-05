@@ -54,3 +54,8 @@ class FeedbackCategoryEnum(Enum):
 class NotificationTypeEnum(Enum):
     CONNECTION_ACCEPTED = "connection_accepted"
     NEW_FEEDBACK = "new_feedback"
+
+
+class MessageTypeEnum(Enum):
+    TEXT = "text"
+    BEAT = "beat"

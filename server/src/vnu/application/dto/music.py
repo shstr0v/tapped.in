@@ -8,6 +8,7 @@ from vnu.domain.entities.music.enums import (
     ConnectionStatusEnum,
     ExperienceLevelEnum,
     FeedbackCategoryEnum,
+    MessageTypeEnum,
     MusicProfileRoleEnum,
     NotificationTypeEnum,
     SocialPlatformEnum,
@@ -252,3 +253,71 @@ class NotificationDTO:
 @dataclass(frozen=True)
 class MarkNotificationReadDTO:
     notification_id: UUID
+
+
+@dataclass(frozen=True)
+class ChatUserDTO:
+    user_id: UUID
+    artist_name: str
+    profile_id: UUID | None = None
+    avatar_url: str | None = None
+    role: MusicProfileRoleEnum | None = None
+
+
+@dataclass(frozen=True)
+class BeatPreviewDTO:
+    id: UUID
+    profile_id: UUID
+    audio_url: str
+    title: str
+    tags: list[str]
+    genre: str | None = None
+    bpm: int | None = None
+    owner: ChatUserDTO | None = None
+
+
+@dataclass(frozen=True)
+class MessageDTO:
+    id: UUID
+    conversation_id: UUID
+    sender_id: UUID
+    type: MessageTypeEnum
+    created_at: datetime
+    text: str | None = None
+    beat: BeatPreviewDTO | None = None
+    read_at: datetime | None = None
+
+
+@dataclass(frozen=True)
+class ConversationSummaryDTO:
+    id: UUID
+    other_user: ChatUserDTO
+    last_message: MessageDTO | None
+    last_message_at: datetime | None
+    unread_count: int
+    created_at: datetime
+
+
+@dataclass(frozen=True)
+class OpenConversationDTO:
+    user_id: UUID
+
+
+@dataclass(frozen=True)
+class SendMessageDTO:
+    conversation_id: UUID
+    type: MessageTypeEnum
+    text: str | None = None
+    beat_id: UUID | None = None
+
+
+@dataclass(frozen=True)
+class ListMessagesDTO:
+    conversation_id: UUID
+    limit: int = 50
+    before: datetime | None = None
+
+
+@dataclass(frozen=True)
+class MarkConversationReadDTO:
+    conversation_id: UUID

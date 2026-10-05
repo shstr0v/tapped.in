@@ -1,46 +1,66 @@
-import { useState } from "react";
 import { router } from "expo-router";
 
-import { Screen } from "@/components/layout/screen";
-import { Button, Card, Input, Text } from "@/components/ui";
 import { useUploadFeaturedWork } from "@/features/uploads/upload-featured-work";
-import { OnboardingStepper } from "@/widgets/onboarding-stepper";
+
+import { useOnboardingDraft } from "./model/draft-store";
+import { Field, FormError, OnboardingShell, Section } from "./ui/onboarding-kit";
+
+const URL_PATTERN = /^https?:\/\/\S+\.\S+/i;
 
 export function UploadWorkPage() {
-  const [audioUrl, setAudioUrl] = useState("");
-  const [title, setTitle] = useState("");
+  const draft = useOnboardingDraft();
   const upload = useUploadFeaturedWork();
 
+  const audioUrl = draft.audioUrl.trim();
+  const urlError = audioUrl && !URL_PATTERN.test(audioUrl) ? "Paste a full link starting with https://" : null;
+  const canContinue = !!draft.title.trim() && !!audioUrl && !urlError;
+
+  const finish = () => {
+    draft.reset();
+    router.replace("/(tabs)/feed");
+  };
+
   const submit = () => {
-    upload.mutate(
-      {
-        audio_url: audioUrl,
-        tags: [],
-        title,
-      },
-      {
-        onSuccess: () => router.replace("/(tabs)/feed"),
-      },
-    );
+    if (!canContinue) return;
+    upload.mutate({ audio_url: audioUrl, tags: [], title: draft.title.trim() }, { onSuccess: finish });
   };
 
   return (
-    <Screen>
-      <OnboardingStepper currentStep={2} steps={["Profile", "Music identity", "Upload"]} />
-      <Text variant="heading">Featured work</Text>
-      <Text variant="muted">The backend currently accepts an audio URL for fastest MVP iteration.</Text>
-      <Card className="gap-4">
-        <Input onChangeText={setTitle} placeholder="Track or beat title" value={title} />
-        <Input autoCapitalize="none" onChangeText={setAudioUrl} placeholder="Audio URL" value={audioUrl} />
-        {upload.isError ? (
-          <Text className="text-destructive" variant="muted">
-            Could not save this upload.
-          </Text>
-        ) : null}
-        <Button disabled={upload.isPending || !title || !audioUrl} onPress={submit}>
-          {upload.isPending ? "Saving" : "Open feed"}
-        </Button>
-      </Card>
-    </Screen>
+    <OnboardingShell
+      continueDisabled={!canContinue}
+      continueLabel="Finish"
+      loading={upload.isPending}
+      onContinue={submit}
+      secondary={{ label: "Skip for now", onPress: finish }}
+      step={2}
+      subtitle="Pin one track or beat so people can hear you first."
+      title="Show your best work"
+    >
+      <Section label="Title">
+        <Field
+          maxLength={80}
+          onChangeText={(title) => draft.set({ title })}
+          placeholder="Track or beat name"
+          returnKeyType="next"
+          value={draft.title}
+        />
+      </Section>
+
+      <Section error={urlError} label="Audio link">
+        <Field
+          autoCapitalize="none"
+          autoCorrect={false}
+          error={!!urlError}
+          inputMode="url"
+          keyboardType="url"
+          onChangeText={(value) => draft.set({ audioUrl: value })}
+          placeholder="https://soundcloud.com/…"
+          textContentType="URL"
+          value={draft.audioUrl}
+        />
+      </Section>
+
+      <FormError>{upload.isError ? "We couldn't save this track. Check the link and try again." : null}</FormError>
+    </OnboardingShell>
   );
 }

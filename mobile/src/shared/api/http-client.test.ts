@@ -16,13 +16,13 @@ describe("apiRequest", () => {
     globalThis.fetch = jest.fn(async () => jsonResponse(200, { ok: true }));
   });
 
-  it("adds the sid cookie to authenticated requests", async () => {
+  it("sends the sid as a bearer token on authenticated requests", async () => {
     setSessionSidResolver(() => "session-123");
 
     await apiRequest("/profiles/me");
 
     const [, init] = (globalThis.fetch as jest.Mock).mock.calls[0];
-    expect((init.headers as Headers).get("Cookie")).toBe("sid=session-123");
+    expect((init.headers as Headers).get("Authorization")).toBe("Bearer session-123");
   });
 
   it("normalizes backend error responses", async () => {

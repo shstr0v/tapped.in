@@ -39,6 +39,15 @@ export type EmailLoginRequest = {
   password: string;
 };
 
+export type EmailCodeRequest = {
+  email: string;
+};
+
+export type EmailCodeVerifyRequest = {
+  code: string;
+  email: string;
+};
+
 export type PhoneLoginRequest = {
   phone: string;
 };

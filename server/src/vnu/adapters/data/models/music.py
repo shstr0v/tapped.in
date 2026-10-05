@@ -2,7 +2,18 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import TIMESTAMP, UUID, Boolean, CheckConstraint, Enum, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy import (
+    TIMESTAMP,
+    UUID,
+    Boolean,
+    CheckConstraint,
+    Enum,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    UniqueConstraint,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -12,6 +23,7 @@ from vnu.domain.entities.music.enums import (
     ConnectionStatusEnum,
     ExperienceLevelEnum,
     FeedbackCategoryEnum,
+    MessageTypeEnum,
     MusicProfileRoleEnum,
     NotificationTypeEnum,
     SocialPlatformEnum,
@@ -206,3 +218,65 @@ class NotificationModel(Base):
     payload: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
     is_read: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)
+
+
+class ConversationModel(Base):
+    __tablename__ = "conversation"
+    __table_args__ = (
+        UniqueConstraint("user_1_id", "user_2_id", name="uq_conversation_user_pair"),
+        CheckConstraint("user_1_id::text < user_2_id::text", name="ck_conversation_user_order"),
+        Index("ix_conversation_user_1_id", "user_1_id"),
+        Index("ix_conversation_user_2_id", "user_2_id"),
+        Index("ix_conversation_last_message_at", "last_message_at"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    user_1_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("user.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    user_2_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("user.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)
+    last_message_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=True), nullable=True)
+
+
+class MessageModel(Base):
+    __tablename__ = "message"
+    __table_args__ = (
+        CheckConstraint(
+            "(type = 'text' AND text IS NOT NULL AND btrim(text) <> '' AND beat_id IS NULL) "
+            "OR (type = 'beat' AND text IS NULL)",
+            name="ck_message_payload",
+        ),
+        Index("ix_message_conversation_created_at", "conversation_id", "created_at"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    conversation_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("conversation.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    sender_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("user.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    type: Mapped[str] = mapped_column(
+        Enum(*(item.value for item in MessageTypeEnum), name="message_type_enum"),
+        nullable=False,
+    )
+    text: Mapped[str | None] = mapped_column(String(2000), nullable=True)
+    beat_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("music_upload.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)
+    read_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=True), nullable=True)

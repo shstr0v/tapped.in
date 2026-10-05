@@ -1,5 +1,7 @@
 import type {
   AuthSessionResponse,
+  EmailCodeRequest,
+  EmailCodeVerifyRequest,
   EmailLoginRequest,
   PhoneLoginRequest,
   PhoneLoginVerifyRequest,
@@ -17,6 +19,22 @@ async function persistAuthResponse<TResponse extends { sid: string }>(response: 
 export const authApi = {
   async emailLogin(data: EmailLoginRequest) {
     const response = await apiRequest<AuthSessionResponse>("/auth/email/login", {
+      auth: false,
+      body: data,
+      method: "POST",
+    });
+    return persistAuthResponse(response);
+  },
+
+  requestEmailCode: (data: EmailCodeRequest) =>
+    apiRequest<unknown>("/auth/email/code", {
+      auth: false,
+      body: data,
+      method: "POST",
+    }),
+
+  async verifyEmailCode(data: EmailCodeVerifyRequest) {
+    const response = await apiRequest<AuthSessionResponse>("/auth/email/verify", {
       auth: false,
       body: data,
       method: "POST",

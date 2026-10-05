@@ -10,13 +10,16 @@ from vnu.domain.entities.music.enums import (
     ConnectionStatusEnum,
     ExperienceLevelEnum,
     FeedbackCategoryEnum,
+    MessageTypeEnum,
     MusicProfileRoleEnum,
     NotificationTypeEnum,
     SocialPlatformEnum,
     SwipeActionEnum,
 )
-from vnu.domain.entities.music.value_objects import ensure_different_profiles
-from vnu.domain.exceptions.music import InvalidMusicInteractionError, InvalidMusicUploadError
+from vnu.domain.entities.music.value_objects import ensure_different_profiles, ordered_user_ids
+from vnu.domain.exceptions.music import InvalidMessageError, InvalidMusicInteractionError, InvalidMusicUploadError
+
+MAX_MESSAGE_TEXT_LENGTH = 2000
 
 
 @dataclass
@@ -258,6 +261,77 @@ class Notification(Entity):
             type=type,
             payload=payload,
             is_read=False,
+            created_at=datetime.now(UTC),
+        )
+
+
+@dataclass
+class Conversation(Entity):
+    id: UUID
+    user_1_id: UUID
+    user_2_id: UUID
+    created_at: datetime
+    updated_at: datetime
+    last_message_at: datetime | None = None
+
+    @classmethod
+    def create(cls, first_user_id: UUID, second_user_id: UUID) -> "Conversation":
+        user_1_id, user_2_id = ordered_user_ids(first_user_id, second_user_id)
+        now = datetime.now(UTC)
+        return cls(
+            id=uuid.uuid4(),
+            user_1_id=user_1_id,
+            user_2_id=user_2_id,
+            created_at=now,
+            updated_at=now,
+        )
+
+    def includes(self, user_id: UUID) -> bool:
+        return user_id in {self.user_1_id, self.user_2_id}
+
+    def other_user_id(self, user_id: UUID) -> UUID:
+        if user_id == self.user_1_id:
+            return self.user_2_id
+        if user_id == self.user_2_id:
+            return self.user_1_id
+        raise InvalidMessageError("User is not part of this conversation.")
+
+
+@dataclass
+class Message(Entity):
+    id: UUID
+    conversation_id: UUID
+    sender_id: UUID
+    type: MessageTypeEnum
+    created_at: datetime
+    text: str | None = None
+    beat_id: UUID | None = None
+    read_at: datetime | None = None
+
+    @classmethod
+    def create_text(cls, conversation_id: UUID, sender_id: UUID, text: str) -> "Message":
+        cleaned = text.strip()
+        if not cleaned:
+            raise InvalidMessageError("Text messages require non-empty text.")
+        if len(cleaned) > MAX_MESSAGE_TEXT_LENGTH:
+            raise InvalidMessageError("Text messages cannot be longer than 2000 characters.")
+        return cls(
+            id=uuid.uuid4(),
+            conversation_id=conversation_id,
+            sender_id=sender_id,
+            type=MessageTypeEnum.TEXT,
+            text=cleaned,
+            created_at=datetime.now(UTC),
+        )
+
+    @classmethod
+    def create_beat(cls, conversation_id: UUID, sender_id: UUID, beat_id: UUID) -> "Message":
+        return cls(
+            id=uuid.uuid4(),
+            conversation_id=conversation_id,
+            sender_id=sender_id,
+            type=MessageTypeEnum.BEAT,
+            beat_id=beat_id,
             created_at=datetime.now(UTC),
         )
 

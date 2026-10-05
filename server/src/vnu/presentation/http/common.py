@@ -5,6 +5,7 @@ from vnu.application.common.error import ApplicationError
 from vnu.application.errors.auth import UnauthorizedError
 from vnu.application.errors.music import (
     ConnectionNotFoundError,
+    ConversationNotFoundError,
     DuplicateMusicActionError,
     ForbiddenMusicActionError,
     InvalidMusicActionError,
@@ -14,9 +15,15 @@ from vnu.application.errors.music import (
     NotificationNotFoundError,
 )
 from vnu.application.errors.user import UserNotFoundError
-from vnu.domain.exceptions.music import InvalidMusicInteractionError, InvalidMusicProfileError, InvalidMusicUploadError
+from vnu.domain.exceptions.music import (
+    InvalidMessageError,
+    InvalidMusicInteractionError,
+    InvalidMusicProfileError,
+    InvalidMusicUploadError,
+)
 from vnu.presentation.http.routers.auth import router as auth_router
 from vnu.presentation.http.routers.connections import router as connections_router
+from vnu.presentation.http.routers.conversations import router as conversations_router
 from vnu.presentation.http.routers.feedback import router as feedback_router
 from vnu.presentation.http.routers.notifications import router as notifications_router
 from vnu.presentation.http.routers.profiles import router as profiles_router
@@ -34,6 +41,7 @@ def include_routers(app: FastAPI) -> None:
     app.include_router(recommendations_router)
     app.include_router(swipes_router)
     app.include_router(connections_router)
+    app.include_router(conversations_router)
     app.include_router(feedback_router)
     app.include_router(notifications_router)
 
@@ -81,6 +89,7 @@ def include_exception_handlers(app: FastAPI) -> None:
         MusicProfileNotFoundError,
         MusicUploadNotFoundError,
         ConnectionNotFoundError,
+        ConversationNotFoundError,
         NotificationNotFoundError,
     ):
         app.add_exception_handler(exception_type, music_not_found_handler)
@@ -91,7 +100,7 @@ def include_exception_handlers(app: FastAPI) -> None:
     for exception_type in (ForbiddenMusicActionError, InvalidMusicInteractionError):
         app.add_exception_handler(exception_type, music_forbidden_handler)
 
-    for exception_type in (InvalidMusicProfileError, InvalidMusicUploadError):
+    for exception_type in (InvalidMusicProfileError, InvalidMusicUploadError, InvalidMessageError):
         app.add_exception_handler(exception_type, music_validation_handler)
 
     @app.exception_handler(ApplicationError)

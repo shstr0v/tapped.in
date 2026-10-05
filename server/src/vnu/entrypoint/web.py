@@ -60,6 +60,7 @@ def startup_lifespan() -> Callable[[FastAPI], AsyncContextManager[None]]:
 def get_app(
     container: AsyncContainer,
     cors_origins: tuple[str, ...],
+    cors_origin_regex: str | None = None,
 ) -> FastAPI:
     fastapi = FastAPI(
         title="vnu",
@@ -71,6 +72,7 @@ def get_app(
     fastapi.add_middleware(
         CORSMiddleware,
         allow_origins=list(cors_origins),
+        allow_origin_regex=cors_origin_regex,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"]
@@ -90,7 +92,7 @@ def get_app(
 def main() -> None:
     config = Config.load_from_environment()
     container = get_async_container(config)
-    app = get_app(container, config.cors_origins)
+    app = get_app(container, config.cors_origins, config.cors_origin_regex)
     log_config = get_log_config()
 
     uvicorn.run(app, log_config=log_config, host="0.0.0.0")

@@ -9,6 +9,7 @@ export function useSwipeProfile() {
     mutationFn: (data: SwipeRequest) => swipesApi.swipe(data),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["recommendations", "feed"] });
+      void queryClient.invalidateQueries({ queryKey: ["connections"] });
       void queryClient.invalidateQueries({ queryKey: ["swipes", "saved"] });
     },
   });

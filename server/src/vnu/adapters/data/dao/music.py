@@ -1,11 +1,14 @@
+from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import exists, or_, select
+from sqlalchemy import exists, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from vnu.adapters.data.models import (
     ConnectionModel,
+    ConversationModel,
     FeedbackModel,
+    MessageModel,
     MusicIdentityModel,
     MusicProfileModel,
     MusicUploadModel,
@@ -15,8 +18,12 @@ from vnu.adapters.data.models import (
 )
 from vnu.application.common.music.dao import MusicDAO
 from vnu.application.dto.music import (
+    BeatPreviewDTO,
+    ChatUserDTO,
     ConnectionDTO,
+    ConversationSummaryDTO,
     FeedbackDTO,
+    MessageDTO,
     MusicIdentityDTO,
     MusicProfileDTO,
     MusicUploadDTO,
@@ -29,11 +36,24 @@ from vnu.domain.entities.music.enums import (
     ConnectionStatusEnum,
     ExperienceLevelEnum,
     FeedbackCategoryEnum,
+    MessageTypeEnum,
     MusicProfileRoleEnum,
     NotificationTypeEnum,
     SocialPlatformEnum,
     SwipeActionEnum,
 )
+
+
+def _chat_user(profile: MusicProfileModel | None, user_id: UUID) -> ChatUserDTO:
+    if profile is None:
+        return ChatUserDTO(user_id=user_id, artist_name="")
+    return ChatUserDTO(
+        user_id=profile.user_id,
+        profile_id=profile.id,
+        artist_name=profile.artist_name,
+        avatar_url=profile.avatar_url,
+        role=MusicProfileRoleEnum(profile.role),
+    )
 
 
 class MusicDAOImpl(MusicDAO):
@@ -90,6 +110,14 @@ class MusicDAOImpl(MusicDAO):
         result = await self.session.execute(query)
         return [await self._to_profile_dto(profile) for profile in result.scalars().all()]
 
+    async def list_like_edges(self) -> list[tuple[UUID, UUID]]:
+        result = await self.session.execute(
+            select(SwipeModel.actor_profile_id, SwipeModel.target_profile_id).where(
+                SwipeModel.action.in_((SwipeActionEnum.LIKE.value, SwipeActionEnum.SAVE.value))
+            )
+        )
+        return [(actor_id, target_id) for actor_id, target_id in result.all()]
+
     async def get_swipe_action(self, actor_profile_id: UUID, target_profile_id: UUID) -> SwipeActionEnum | None:
         result = await self.session.execute(
             select(SwipeModel.action).where(
@@ -141,6 +169,171 @@ class MusicDAOImpl(MusicDAO):
             .order_by(NotificationModel.created_at.desc())
         )
         return [self._to_notification_dto(notification) for notification in result.scalars().all()]
+
+    async def list_conversation_summaries(self, user_id: UUID) -> list[ConversationSummaryDTO]:
+        result = await self.session.execute(
+            select(ConversationModel)
+            .where(
+                or_(
+                    ConversationModel.user_1_id == user_id,
+                    ConversationModel.user_2_id == user_id,
+                )
+            )
+            .order_by(ConversationModel.last_message_at.desc().nulls_last(), ConversationModel.created_at.desc())
+        )
+        return await self._conversation_summaries(list(result.scalars().all()), user_id)
+
+    async def get_conversation_summary(self, conversation_id: UUID, user_id: UUID) -> ConversationSummaryDTO | None:
+        result = await self.session.execute(
+            select(ConversationModel).where(
+                ConversationModel.id == conversation_id,
+                or_(
+                    ConversationModel.user_1_id == user_id,
+                    ConversationModel.user_2_id == user_id,
+                ),
+            )
+        )
+        conversation = result.scalar_one_or_none()
+        if conversation is None:
+            return None
+        summaries = await self._conversation_summaries([conversation], user_id)
+        return summaries[0]
+
+    async def list_messages(
+        self,
+        conversation_id: UUID,
+        *,
+        limit: int,
+        before: datetime | None,
+    ) -> list[MessageDTO]:
+        query = select(MessageModel).where(MessageModel.conversation_id == conversation_id)
+        if before is not None:
+            query = query.where(MessageModel.created_at < before)
+        result = await self.session.execute(
+            query.order_by(MessageModel.created_at.desc(), MessageModel.id.desc()).limit(limit)
+        )
+        messages = list(result.scalars().all())
+        messages.reverse()
+        return await self._to_message_dtos(messages)
+
+    async def get_message(self, message_id: UUID) -> MessageDTO | None:
+        result = await self.session.execute(select(MessageModel).where(MessageModel.id == message_id))
+        message = result.scalar_one_or_none()
+        if message is None:
+            return None
+        return (await self._to_message_dtos([message]))[0]
+
+    async def _conversation_summaries(
+        self,
+        conversations: list[ConversationModel],
+        user_id: UUID,
+    ) -> list[ConversationSummaryDTO]:
+        if not conversations:
+            return []
+        conversation_ids = [conversation.id for conversation in conversations]
+        other_user_ids = [
+            conversation.user_2_id if conversation.user_1_id == user_id else conversation.user_1_id
+            for conversation in conversations
+        ]
+        profiles = await self._profiles_by_user_ids(other_user_ids)
+        last_messages = await self._latest_messages(conversation_ids)
+        message_dtos = await self._to_message_dtos(list(last_messages.values()))
+        messages_by_conversation = {message.conversation_id: message for message in message_dtos}
+        unread_counts = await self._unread_counts(conversation_ids, user_id)
+        summaries: list[ConversationSummaryDTO] = []
+        for conversation in conversations:
+            other_user_id = conversation.user_2_id if conversation.user_1_id == user_id else conversation.user_1_id
+            summaries.append(
+                ConversationSummaryDTO(
+                    id=conversation.id,
+                    other_user=_chat_user(profiles.get(other_user_id), other_user_id),
+                    last_message=messages_by_conversation.get(conversation.id),
+                    last_message_at=conversation.last_message_at,
+                    unread_count=unread_counts.get(conversation.id, 0),
+                    created_at=conversation.created_at,
+                )
+            )
+        return summaries
+
+    async def _profiles_by_user_ids(self, user_ids: list[UUID]) -> dict[UUID, MusicProfileModel]:
+        if not user_ids:
+            return {}
+        result = await self.session.execute(
+            select(MusicProfileModel).where(MusicProfileModel.user_id.in_(set(user_ids)))
+        )
+        return {profile.user_id: profile for profile in result.scalars().all()}
+
+    async def _latest_messages(self, conversation_ids: list[UUID]) -> dict[UUID, MessageModel]:
+        if not conversation_ids:
+            return {}
+        result = await self.session.execute(
+            select(MessageModel)
+            .where(MessageModel.conversation_id.in_(conversation_ids))
+            .distinct(MessageModel.conversation_id)
+            .order_by(MessageModel.conversation_id, MessageModel.created_at.desc(), MessageModel.id.desc())
+        )
+        return {message.conversation_id: message for message in result.scalars().all()}
+
+    async def _unread_counts(self, conversation_ids: list[UUID], user_id: UUID) -> dict[UUID, int]:
+        if not conversation_ids:
+            return {}
+        result = await self.session.execute(
+            select(MessageModel.conversation_id, func.count(MessageModel.id))
+            .where(
+                MessageModel.conversation_id.in_(conversation_ids),
+                MessageModel.sender_id != user_id,
+                MessageModel.read_at.is_(None),
+            )
+            .group_by(MessageModel.conversation_id)
+        )
+        return {conversation_id: int(count) for conversation_id, count in result.all()}
+
+    async def _to_message_dtos(self, messages: list[MessageModel]) -> list[MessageDTO]:
+        beats = await self._beat_previews([message.beat_id for message in messages if message.beat_id is not None])
+        return [
+            MessageDTO(
+                id=message.id,
+                conversation_id=message.conversation_id,
+                sender_id=message.sender_id,
+                type=MessageTypeEnum(message.type),
+                text=message.text,
+                beat=beats.get(message.beat_id) if message.beat_id is not None else None,
+                created_at=message.created_at,
+                read_at=message.read_at,
+            )
+            for message in messages
+        ]
+
+    async def _beat_previews(self, beat_ids: list[UUID]) -> dict[UUID, BeatPreviewDTO]:
+        if not beat_ids:
+            return {}
+        upload_result = await self.session.execute(
+            select(MusicUploadModel).where(MusicUploadModel.id.in_(set(beat_ids)))
+        )
+        uploads = list(upload_result.scalars().all())
+        profile_ids = {upload.profile_id for upload in uploads}
+        profiles: dict[UUID, MusicProfileModel] = {}
+        if profile_ids:
+            profile_result = await self.session.execute(
+                select(MusicProfileModel).where(MusicProfileModel.id.in_(profile_ids))
+            )
+            profiles = {profile.id: profile for profile in profile_result.scalars().all()}
+        previews: dict[UUID, BeatPreviewDTO] = {}
+        for upload in uploads:
+            if not upload.audio_url.strip():
+                continue
+            owner = profiles.get(upload.profile_id)
+            previews[upload.id] = BeatPreviewDTO(
+                id=upload.id,
+                profile_id=upload.profile_id,
+                audio_url=upload.audio_url,
+                title=upload.title,
+                genre=upload.genre,
+                tags=list(upload.tags),
+                bpm=upload.bpm,
+                owner=_chat_user(owner, owner.user_id) if owner is not None else None,
+            )
+        return previews
 
     async def _to_profile_dto(self, profile: MusicProfileModel) -> MusicProfileDTO:
         identity_result = await self.session.execute(
