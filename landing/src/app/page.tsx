@@ -26,6 +26,7 @@ import {
   Phone,
   ProfileScreen,
 } from "@/components/app-screens";
+import { DemoSection } from "@/components/DemoSection";
 import { FeatureBento } from "@/components/feature-bento";
 import { ProblemSection } from "@/components/problem-section";
 import { SiteFooter } from "@/components/site-footer";
@@ -173,6 +174,8 @@ export default function Home() {
           </a>
         </div>
       </section>
+
+      <DemoSection />
 
       <FeatureBento />
 

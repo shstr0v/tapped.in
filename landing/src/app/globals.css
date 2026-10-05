@@ -646,6 +646,7 @@ button:disabled {
 }
 
 .preview-copy p,
+.section-intro p,
 .problem-section .section-intro p {
   margin: 20px 0 0;
   max-width: 600px;
@@ -662,6 +663,22 @@ button:disabled {
   color: var(--blue);
   font-size: 15px;
   font-weight: 600;
+}
+
+.demo-frame {
+  display: flex;
+  justify-content: center;
+  margin-top: 40px;
+}
+
+.demo-screen {
+  background: #0d0f14;
+}
+
+.demo-screen iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
 }
 
 /* How it works */
