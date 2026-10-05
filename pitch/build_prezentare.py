@@ -274,7 +274,7 @@ def problem(prs, art):
     )
     cards = [
         ("01", "Promovarea", "Postări, mesaje și urmărire. Adesea mai mult decât beat-ul."),
-        ("02", "Căutarea", "Artiștii există. Îi cauți unul câte unul."),
+        ("02", "Căutarea", "Artiștii există. Căutarea rămâne manuală."),
         ("03", "Distribuția", "Un beat bun care nu ajunge la artistul potrivit."),
     ]
     gap = 0.18
@@ -454,7 +454,21 @@ def solution(prs, art):
             [{"text": label, "size": 20, "bold": True}],
             anchor="ctr",
         )
-    picture(slide, art["signup"], 7.35, 1.35, 5.35, 5.35)
+    write(
+        slide,
+        0.7,
+        6.45,
+        6.4,
+        0.4,
+        [
+            {
+                "text": "De la beat la omul potrivit, mai repede.",
+                "size": 16,
+                "color": MUTED,
+            }
+        ],
+    )
+    picture(slide, art["signup"], 7.35, 1.25, 5.35, 5.15)
 
 
 def matching(prs, art):
@@ -479,53 +493,41 @@ def matching(prs, art):
         0.7,
         [
             {
-                "text": "Matching-ul aduce colaboratorii compatibili.",
+                "text": "Potrivim după compatibilitate muzicală.",
                 "size": 18,
                 "color": MUTED,
             }
         ],
     )
     signals = ["Locație", "Genuri", "Type beats", "Influențe", "Experiență"]
-    for i, label in enumerate(signals):
-        y = 3.75 + (i % 5) * 0.0
-    # two rows: 3 + 2, left aligned under the copy, image on the right
+    chip_w = 2.2
     rows = [signals[:3], signals[3:]]
-    y = 3.8
+    y = 3.85
     for row in rows:
         x = 0.7
         for label in row:
-            tw = 2.15 if len(label) < 12 else 2.35
-            rect(slide, x, y, tw, 0.62, FIELD, radius=0.31)
+            rect(slide, x, y, chip_w, 0.58, FIELD, radius=0.29)
             write(
                 slide,
                 x,
                 y,
-                tw,
-                0.62,
+                chip_w,
+                0.58,
                 [{"text": label, "size": 16, "bold": True}],
                 align="center",
                 anchor="ctr",
             )
-            x += tw + 0.14
-        y += 0.78
+            x += chip_w + 0.14
+        y += 0.74
     write(
         slide,
         0.7,
         5.55,
         7.1,
-        0.9,
+        0.85,
         [
-            {
-                "text": "Asculți. Dai swipe. Te conectezi.",
-                "size": 20,
-                "bold": True,
-            },
-            {
-                "text": "Fără ore de căutare.",
-                "size": 16,
-                "color": MUTED,
-                "before": 4,
-            },
+            {"text": "De la beat la colaborator, în minute.", "size": 20, "bold": True},
+            {"text": "Fără vânătoare de artiști.", "size": 16, "color": MUTED, "before": 4},
         ],
     )
     picture(slide, art["login"], 8.15, 1.45, 4.55, 5.2)
