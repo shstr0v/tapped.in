@@ -440,7 +440,7 @@ make test          all test suites
 | --- | --- |
 | `env file server/.env not found` | Run `make env` and fill in the secrets. |
 | `Bind for 0.0.0.0:8000 / 5433 / 6380 failed: port is already allocated`, or `container name "/backend" is already in use` | Another stack from `server/` or an older project is running. Stop it (`docker ps`, `docker compose down` in that project). Fixed `container_name`s mean only one copy of the stack can run at a time. |
-| Port 8081 is busy | Another Expo/Metro is running on the host. Stop it or set `MOBILE_PORT=18081` in `mobile/.env` (Metro still listens on 8081 inside the container). |
+| Port 8081 is busy | Another Expo/Metro is running on the host. Stop it or set `MOBILE_PORT=18081` in `mobile/.env` (Metro still listens on 8081 inside the container; the QR code keeps advertising `:8081`, so open `exp://<host>:18081` manually in Expo Go). |
 | App on the phone shows "Network request failed" | `EXPO_PUBLIC_API_URL` points to `localhost`, which is the phone itself. Use `http://<LAN IP>:8000`, restart `mobile` and reload the app (the value is baked into the bundle: `r` in the Expo terminal, or `docker compose restart mobile`). |
 | QR code opens `exp://localhost:8081` on a phone and hangs | Set `REACT_NATIVE_PACKAGER_HOSTNAME` to your LAN IP and recreate the `mobile` container. Check that your firewall allows ports 8000 and 8081 and that the phone is on the same Wi-Fi (guest/"client isolation" networks block it). |
 | Android Emulator cannot reach the backend | Use `http://10.0.2.2:8000`, not `localhost`. |
@@ -451,7 +451,7 @@ make test          all test suites
 | New npm package missing in the container | The `node_modules` anonymous volume is stale. Run `make rebuild` (`up --build -V`). |
 | Requests fail in Expo Web with a CORS error | The web origin is not in the CORS allow-list. Add `http://localhost:8081` to the origins in `server/src/vnu/entrypoint/web.py`, or test on a device/simulator. |
 | Apple Silicon: PostgreSQL is slow to start | The `postgis/postgis` image runs as `linux/amd64` under emulation (`platform` is set in the server compose). Allow a longer startup. |
-| `docker compose config` prints secrets | It resolves `server/.env`. Use `make config` (`--no-env-resolution`) when sharing output. |
+| `docker compose config` prints secrets | It inlines the values from `server/.env`. Use `make config` (quiet validation, `config -q`) and do not paste the full output anywhere. |
 
 ## License
 
