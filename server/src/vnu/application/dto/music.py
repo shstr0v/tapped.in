@@ -123,6 +123,21 @@ class CreateFeaturedUploadDTO:
 
 
 @dataclass(frozen=True)
+class CreateBeatDTO:
+    audio_key: str
+    title: str
+    genre: str | None = None
+    tags: list[str] = field(default_factory=list)
+    bpm: int | None = None
+    description: str | None = None
+
+
+@dataclass(frozen=True)
+class GetBeatDTO:
+    beat_id: UUID
+
+
+@dataclass(frozen=True)
 class DeleteUploadDTO:
     upload_id: UUID
 
@@ -262,6 +277,23 @@ class ChatUserDTO:
     profile_id: UUID | None = None
     avatar_url: str | None = None
     role: MusicProfileRoleEnum | None = None
+
+
+@dataclass(frozen=True)
+class BeatDTO:
+    id: UUID
+    owner_id: UUID
+    profile_id: UUID
+    title: str
+    audio_url: str
+    audio_key: str | None
+    tags: list[str]
+    is_featured: bool
+    created_at: datetime
+    genre: str | None = None
+    bpm: int | None = None
+    description: str | None = None
+    owner: ChatUserDTO | None = None
 
 
 @dataclass(frozen=True)

@@ -1,3 +1,4 @@
+from vnu.application.interactors.music.beats import CreateBeat
 from vnu.application.interactors.music.connections import AcceptConnection, RejectConnection, RequestConnection
 from vnu.application.interactors.music.conversations import MarkConversationRead, OpenConversation, SendMessage
 from vnu.application.interactors.music.feedback import CreateFeedback
@@ -8,6 +9,7 @@ from vnu.application.interactors.music.uploads import CreateFeaturedUpload, Dele
 
 __all__ = [
     "AcceptConnection",
+    "CreateBeat",
     "CreateFeaturedUpload",
     "CreateFeedback",
     "DeleteUpload",

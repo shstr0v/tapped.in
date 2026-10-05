@@ -1,1 +1,1 @@
-export type { CreateFeaturedUploadRequest, MusicUpload } from "./model/types";
+export type { Beat, CreateBeatRequest, CreateFeaturedUploadRequest, MusicUpload } from "./model/types";

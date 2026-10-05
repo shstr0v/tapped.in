@@ -27,6 +27,7 @@ export function TabsLayout() {
       <Tabs.Screen name="my-profile" options={hidden} />
       <Tabs.Screen name="connections" options={hidden} />
       <Tabs.Screen name="edit-profile" options={hidden} />
+      <Tabs.Screen name="upload-beat" options={hidden} />
     </Tabs>
   );
 }

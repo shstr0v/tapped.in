@@ -1,40 +1,52 @@
 from typing import Any
-from uuid import UUID
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from dishka.integrations.fastapi import FromDishka, inject
 from fastapi import APIRouter, status
 
+from vnu.adapters.auth.idp import SessionIdProvider
 from vnu.adapters.config import AwsConfig
 from vnu.application.common.file_manager import AwsFileManager
 from vnu.application.dto.aws import PresignedUploadDTO
 from vnu.application.dto.music import CreateFeaturedUploadDTO, DeleteUploadDTO
 from vnu.application.interactors.music import CreateFeaturedUpload, DeleteUpload
+from vnu.application.interactors.music.beat_audio import is_beat_upload, new_beat_object_key
+from vnu.application.interactors.music.common import current_user_id
 from vnu.application.queries.music import ListMyUploads
-from vnu.application.schemas.music import CreateFeaturedUploadRequest, CreatePresignedUploadRequest, PresignedUploadResponse
+from vnu.application.schemas.music import (
+    CreateFeaturedUploadRequest,
+    CreatePresignedUploadRequest,
+    PresignedUploadResponse,
+)
+from vnu.domain.exceptions.music import InvalidMusicUploadError
 
 router = APIRouter(prefix="/uploads", tags=["uploads"])
 
 
-def _public_s3_url(config: AwsConfig, key: str) -> str:
-    region = f".s3.{config.region}" if config.region else ".s3"
-    return f"https://{config.bucket_name}{region}.amazonaws.com/{key}"
-
-
 @router.post("/presigned-url")
+@router.post("/presigned")
 @inject
 async def create_presigned_upload_url(
     data: CreatePresignedUploadRequest,
     file_manager: FromDishka[AwsFileManager],
     config: FromDishka[AwsConfig],
+    idp: FromDishka[SessionIdProvider],
 ) -> PresignedUploadResponse:
-    extension = data.file_name.rsplit(".", 1)[-1] if "." in data.file_name else "bin"
-    key = f"{data.folder.strip('/')}/{uuid4()}.{extension}"
+    if is_beat_upload(data.upload_type):
+        user_id = await current_user_id(idp)
+        content_type, key = new_beat_object_key(user_id, data.file_name, data.content_type)
+    else:
+        extension = data.file_name.rsplit(".", 1)[-1] if "." in data.file_name else "bin"
+        content_type = data.content_type
+        folder = data.folder.strip("/")
+        if not folder or folder == "beats" or folder.startswith("beats/"):
+            raise InvalidMusicUploadError("Use upload_type=beat for audio uploads.")
+        key = f"{folder}/{uuid4()}.{extension}"
     presigned = await file_manager.create_upload_url(
-        PresignedUploadDTO(key=key, content_type=data.content_type)
+        PresignedUploadDTO(key=key, content_type=content_type)
     )
     return PresignedUploadResponse(
-        file_url=_public_s3_url(config, key),
+        file_url=config.object_url(key),
         key=presigned.key,
         upload_url=presigned.url,
     )

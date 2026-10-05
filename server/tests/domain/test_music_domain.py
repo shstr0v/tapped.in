@@ -4,7 +4,7 @@ from uuid import UUID, uuid4
 import pytest
 
 from vnu.domain.entities.music import calculate_match_score
-from vnu.domain.entities.music.entities import Connection, MusicIdentity, MusicProfile, Swipe
+from vnu.domain.entities.music.entities import Connection, MusicIdentity, MusicProfile, MusicUpload, Swipe
 from vnu.domain.entities.music.enums import (
     CollaborationStatusEnum,
     ConnectionStatusEnum,
@@ -13,7 +13,7 @@ from vnu.domain.entities.music.enums import (
     SwipeActionEnum,
 )
 from vnu.domain.entities.music.ranking import RankProfile, rank_profiles
-from vnu.domain.exceptions.music import InvalidMusicInteractionError
+from vnu.domain.exceptions.music import InvalidMusicInteractionError, InvalidMusicUploadError
 
 
 def _profile(
@@ -169,6 +169,27 @@ def test_collaborative_signal_boosts_profiles_liked_by_similar_users() -> None:
     suggested_with = next(score for profile_id, score in with_likes if profile_id == suggested_id)
     assert suggested_with.score >= suggested_without.score
     assert neighbor.profile_id != viewer.profile_id
+
+
+def test_upload_requires_audio_and_title() -> None:
+    profile_id = uuid4()
+
+    with pytest.raises(InvalidMusicUploadError):
+        MusicUpload.create(profile_id, "  ", "Title")
+    with pytest.raises(InvalidMusicUploadError):
+        MusicUpload.create(profile_id, "https://example.com/a.mp3", "   ")
+
+    upload = MusicUpload.create_featured(
+        profile_id,
+        " https://example.com/a.mp3 ",
+        "  Night Drive  ",
+        tags=[" rage ", ""],
+    )
+
+    assert upload.is_featured is True
+    assert upload.title == "Night Drive"
+    assert upload.audio_url == "https://example.com/a.mp3"
+    assert upload.tags == ["rage"]
 
 
 def test_swipe_cannot_target_self() -> None:

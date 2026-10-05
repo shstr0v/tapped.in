@@ -55,6 +55,10 @@ class AwsConfig:
     bucket_name: str
     region: str
 
+    def object_url(self, key: str) -> str:
+        region = f".s3.{self.region}" if self.region else ".s3"
+        return f"https://{self.bucket_name}{region}.amazonaws.com/{key.lstrip('/')}"
+
 
 @dataclass(slots=True, frozen=True)
 class EmailConfig:

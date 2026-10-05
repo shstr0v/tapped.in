@@ -114,6 +114,39 @@ class MusicUpload(Entity):
     description: str | None = None
 
     @classmethod
+    def create(
+        cls,
+        profile_id: UUID,
+        audio_url: str,
+        title: str,
+        genre: str | None = None,
+        tags: list[str] | None = None,
+        bpm: int | None = None,
+        description: str | None = None,
+        *,
+        is_featured: bool = False,
+    ) -> "MusicUpload":
+        cleaned_title = title.strip()
+        cleaned_audio = audio_url.strip()
+        if not cleaned_audio or not cleaned_title:
+            raise InvalidMusicUploadError("Audio URL and title are required.")
+        if len(cleaned_title) > 120:
+            raise InvalidMusicUploadError("Title is too long.")
+        cleaned_description = description.strip() if description else None
+        return cls(
+            id=uuid.uuid4(),
+            profile_id=profile_id,
+            audio_url=cleaned_audio,
+            title=cleaned_title,
+            genre=genre.strip() if genre else None,
+            tags=[tag.strip() for tag in (tags or []) if tag and tag.strip()],
+            bpm=bpm,
+            description=cleaned_description or None,
+            is_featured=is_featured,
+            created_at=datetime.now(UTC),
+        )
+
+    @classmethod
     def create_featured(
         cls,
         profile_id: UUID,
@@ -124,19 +157,15 @@ class MusicUpload(Entity):
         bpm: int | None = None,
         description: str | None = None,
     ) -> "MusicUpload":
-        if not audio_url or not title:
-            raise InvalidMusicUploadError("Audio URL and title are required.")
-        return cls(
-            id=uuid.uuid4(),
-            profile_id=profile_id,
-            audio_url=audio_url,
-            title=title,
+        return cls.create(
+            profile_id,
+            audio_url,
+            title,
             genre=genre,
-            tags=tags or [],
+            tags=tags,
             bpm=bpm,
             description=description,
             is_featured=True,
-            created_at=datetime.now(UTC),
         )
 
 

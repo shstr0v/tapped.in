@@ -444,6 +444,30 @@ function ProfileBody({
                 No preview uploaded yet
               </Text>
             )}
+            <Pressable
+              accessibilityLabel={track?.audio_url ? "Upload a new beat" : "Upload a beat for feedback"}
+              accessibilityRole="button"
+              onPress={() => router.push("/upload-beat")}
+              style={({ pressed }) => ({
+                alignItems: "center",
+                backgroundColor: track?.audio_url ? "#F7F7F7" : "#050505",
+                borderRadius: 16,
+                height: 48,
+                justifyContent: "center",
+                transform: [{ scale: pressed ? 0.98 : 1 }],
+              })}
+            >
+              <Text
+                className="font-semibold"
+                style={{
+                  color: track?.audio_url ? "#111111" : "#FFFFFF",
+                  fontSize: BODY_FONT_SIZE,
+                  lineHeight: 20,
+                }}
+              >
+                {track?.audio_url ? "Upload a new beat" : "Upload a beat for feedback"}
+              </Text>
+            </Pressable>
           </View>
 
           {profile.socials.length ? (

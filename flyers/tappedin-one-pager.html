@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>TappedIn — Make music. Find your people.</title>
+    <style>
+      @font-face {
+        font-family: "Source Sans 3";
+        src: url("fonts/source-sans-3-latin.woff2") format("woff2");
+        font-weight: 400 700;
+        font-style: normal;
+        font-display: swap;
+      }
+
+      :root {
+        --ink: #111111;
+        --black: #050505;
+        --muted: #737373;
+        --line: #e3e3e3;
+        --field: #f6f6f6;
+        --white: #ffffff;
+      }
+
+      @page {
+        size: A4 portrait;
+        margin: 0;
+      }
+
+      * {
+        box-sizing: border-box;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        background: #e8e8e8;
+        color: var(--ink);
+        font-family: "SF Pro Text", "SF Pro Display", "Source Sans 3", "Helvetica Neue", Helvetica, Arial, sans-serif;
+        font-optical-sizing: auto;
+        font-synthesis: none;
+        font-weight: 400;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+
+      .sheet {
+        width: 210mm;
+        height: 297mm;
+        margin: 0 auto;
+        padding: 8mm 12mm 8mm;
+        background: var(--white);
+        display: flex;
+        flex-direction: column;
+        gap: 2.2mm;
+      }
+
+      p,
+      h1,
+      h2,
+      h3 {
+        margin: 0;
+      }
+
+      .hero {
+        text-align: center;
+      }
+
+      .hero-art {
+        width: 46mm;
+        height: 42mm;
+        display: block;
+        margin: 0 auto 0.5mm;
+        object-fit: contain;
+      }
+
+      .brand {
+        font-size: 11pt;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        line-height: 1;
+      }
+
+      h1 {
+        margin-top: 1.4mm;
+        font-size: 20pt;
+        font-weight: 700;
+        letter-spacing: -0.03em;
+        line-height: 1.05;
+        text-wrap: balance;
+      }
+
+      .deck {
+        max-width: 158mm;
+        margin: 1.8mm auto 0;
+        color: var(--muted);
+        font-size: 10.5pt;
+        font-weight: 500;
+        line-height: 1.35;
+        text-wrap: pretty;
+      }
+
+      .eyebrow {
+        margin: 0 0 1.4mm;
+        color: var(--ink);
+        font-size: 8pt;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        line-height: 1.2;
+        text-transform: uppercase;
+      }
+
+      .steps {
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
+        gap: 2mm;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        position: relative;
+      }
+
+      .steps::before {
+        content: "";
+        position: absolute;
+        top: 3.1mm;
+        left: 7%;
+        right: 7%;
+        height: 0.25mm;
+        background: var(--line);
+      }
+
+      .step {
+        position: relative;
+        z-index: 1;
+        text-align: center;
+      }
+
+      .step span {
+        display: grid;
+        place-items: center;
+        width: 6.2mm;
+        height: 6.2mm;
+        margin: 0 auto 1.2mm;
+        border-radius: 999px;
+        background: var(--black);
+        color: var(--white);
+        font-size: 8pt;
+        font-weight: 700;
+        line-height: 1;
+      }
+
+      .step strong {
+        display: block;
+        font-size: 8pt;
+        font-weight: 650;
+        letter-spacing: -0.02em;
+        line-height: 1.2;
+        text-wrap: balance;
+      }
+
+      .shift {
+        display: grid;
+        grid-template-columns: 1.15fr 1fr 1fr;
+        gap: 4mm;
+        padding-top: 0.4mm;
+      }
+
+      .shift h2 {
+        font-size: 13pt;
+        font-weight: 700;
+        letter-spacing: -0.03em;
+        line-height: 1.12;
+        text-wrap: balance;
+      }
+
+      .shift p,
+      .feature p,
+      .node span,
+      .stacks p,
+      .arch-note,
+      .person p {
+        color: var(--muted);
+        font-weight: 500;
+      }
+
+      .shift p {
+        margin-top: 1.2mm;
+        font-size: 9pt;
+        line-height: 1.35;
+        text-wrap: pretty;
+      }
+
+      .points h3,
+      .feature h3,
+      .node strong {
+        font-size: 9.5pt;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        line-height: 1.2;
+      }
+
+      .points p {
+        margin-top: 0.5mm;
+        font-size: 8.5pt;
+        line-height: 1.3;
+        text-wrap: pretty;
+      }
+
+      .features {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 2.6mm 4mm;
+      }
+
+      .feature p {
+        margin-top: 0.4mm;
+        font-size: 8.4pt;
+        line-height: 1.3;
+        text-wrap: pretty;
+      }
+
+      .arch {
+        border: 0.3mm solid var(--line);
+        border-radius: 5mm;
+        padding: 2.4mm 3.2mm 2.2mm;
+      }
+
+      .arch-top {
+        display: grid;
+        grid-template-columns: 1fr 16mm 1fr 16mm 1fr;
+        gap: 1.5mm;
+        align-items: stretch;
+      }
+
+      .node {
+        border-radius: 2.6mm;
+        background: var(--field);
+        padding: 2.2mm 2.6mm;
+      }
+
+      .node span {
+        display: block;
+        margin-top: 0.3mm;
+        font-size: 8pt;
+        line-height: 1.25;
+      }
+
+      .arrow {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5mm;
+        color: var(--muted);
+        font-size: 7pt;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .arrow i {
+        display: block;
+        width: 11mm;
+        height: 0.3mm;
+        background: var(--black);
+        position: relative;
+      }
+
+      .arrow i::after {
+        content: "";
+        position: absolute;
+        right: -0.2mm;
+        top: 50%;
+        width: 1.4mm;
+        height: 1.4mm;
+        border-top: 0.35mm solid var(--black);
+        border-right: 0.35mm solid var(--black);
+        transform: translateY(-50%) rotate(45deg);
+      }
+
+      .arch-side {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1mm 5mm;
+        margin-top: 2mm;
+      }
+
+      .arch-side p {
+        margin: 0;
+        color: var(--ink);
+        font-size: 8.5pt;
+        font-weight: 600;
+        line-height: 1.3;
+      }
+
+      .stacks {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 3.5mm;
+        margin-top: 2.2mm;
+      }
+
+      .stacks h3 {
+        margin: 0 0 0.5mm;
+        font-size: 8pt;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      .stacks p {
+        font-size: 8pt;
+        line-height: 1.35;
+      }
+
+      .arch-note {
+        margin-top: 2mm;
+        font-size: 8.5pt;
+        line-height: 1.35;
+        text-wrap: pretty;
+      }
+
+      .footer {
+        display: grid;
+        grid-template-columns: 1fr 1fr 52mm;
+        gap: 3.2mm;
+        align-items: stretch;
+        margin-top: auto;
+      }
+
+      .qr-card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        border: 0.3mm solid var(--line);
+        border-radius: 5mm;
+        padding: 2.4mm 2.4mm 2.2mm;
+        background: var(--white);
+      }
+
+      .qr-card .eyebrow {
+        margin-bottom: 1mm;
+      }
+
+      .qr-card img {
+        width: 32mm;
+        height: 32mm;
+        display: block;
+        background: var(--white);
+      }
+
+      .qr-card strong {
+        margin-top: 1.1mm;
+        font-size: 10.5pt;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        line-height: 1.1;
+      }
+
+      .qr-card a {
+        margin-top: 0.5mm;
+        color: var(--muted);
+        font-size: 7pt;
+        font-weight: 600;
+        line-height: 1.25;
+        text-decoration: none;
+        overflow-wrap: anywhere;
+      }
+
+      .person {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 1mm 0 1mm 0.5mm;
+      }
+
+      .person .eyebrow {
+        margin-bottom: 1mm;
+      }
+
+      .person-name {
+        font-size: 12pt;
+        font-weight: 700;
+        letter-spacing: -0.03em;
+        line-height: 1.05;
+      }
+
+      .person p {
+        margin-top: 1mm;
+        font-size: 8.5pt;
+        line-height: 1.3;
+        text-wrap: pretty;
+      }
+
+      @media screen {
+        body {
+          padding: 16px 0 32px;
+        }
+      }
+
+      @media print {
+        body {
+          background: var(--white);
+          padding: 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <article class="sheet">
+      <header class="hero">
+        <img
+          class="hero-art"
+          src="assets/welcome.png"
+          alt="TappedIn characters with headphones, a microphone, decks and a keyboard"
+          width="1254"
+          height="1254"
+        />
+        <div class="brand">TappedIn</div>
+        <h1>Make music.<br />Find your people.</h1>
+        <p class="deck">
+          A beatmaker finds clients in minutes. ML ranking finds musical fit, so the day goes
+          back to making music instead of promotion.
+        </p>
+      </header>
+
+      <section class="shift" aria-labelledby="shift-title">
+        <div>
+          <p class="eyebrow">The point</p>
+          <h2 id="shift-title">Spend less time promoting.</h2>
+          <p>
+            Searching for artists and sending cold messages eats the hours that should go to
+            beats. TappedIn puts a ranked list of people whose sound fits in front of you.
+          </p>
+        </div>
+        <div class="points">
+          <h3>Hear them first</h3>
+          <p>One featured track, a music identity, and in-app playback. You know the fit before you write.</p>
+        </div>
+        <div class="points">
+          <h3>Then work together</h3>
+          <p>Connect, leave feedback, chat, and send playable beats once both of you are in.</p>
+        </div>
+      </section>
+
+      <section aria-labelledby="how-title">
+        <p class="eyebrow" id="how-title">How it works</p>
+        <ol class="steps">
+          <li class="step"><span>1</span><strong>Create your<br />music profile</strong></li>
+          <li class="step"><span>2</span><strong>Upload<br />your sound</strong></li>
+          <li class="step"><span>3</span><strong>Get ranked<br />matches</strong></li>
+          <li class="step"><span>4</span><strong>Listen</strong></li>
+          <li class="step"><span>5</span><strong>Connect</strong></li>
+          <li class="step"><span>6</span><strong>Chat, share beats<br />and collaborate</strong></li>
+        </ol>
+      </section>
+
+      <section aria-labelledby="product-title">
+        <p class="eyebrow" id="product-title">In the product</p>
+        <div class="features">
+          <div class="feature">
+            <h3>Music profile</h3>
+            <p>Artist or producer, name, photo, location, experience, bio, and collaboration status.</p>
+          </div>
+          <div class="feature">
+            <h3>Music identity</h3>
+            <p>Genres, influences, type beats, moods, BPM range, and social links.</p>
+          </div>
+          <div class="feature">
+            <h3>Featured audio</h3>
+            <p>One track on the card, played in the app. The file uploads to S3 through a presigned URL.</p>
+          </div>
+          <div class="feature">
+            <h3>Ranked feed</h3>
+            <p>TF-IDF similarity and collaborative filtering. Like, skip, or save. Filter by role, genre, or location.</p>
+          </div>
+          <div class="feature">
+            <h3>Connections</h3>
+            <p>A mutual like connects you. Feedback on a track, plus notifications when that happens.</p>
+          </div>
+          <div class="feature">
+            <h3>Chat and beats</h3>
+            <p>Direct messages and playable beats after you connect, with read receipts. Email and phone sign-in.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="arch" aria-labelledby="arch-title">
+        <p class="eyebrow" id="arch-title">Stack</p>
+        <div class="arch-top">
+          <div class="node">
+            <strong>Mobile app</strong>
+            <span>Expo / React Native</span>
+          </div>
+          <div class="arrow">REST<i></i></div>
+          <div class="node">
+            <strong>FastAPI</strong>
+            <span>DDD + Clean Architecture</span>
+          </div>
+          <div class="arrow">SQL<i></i></div>
+          <div class="node">
+            <strong>PostgreSQL</strong>
+            <span>+ PostGIS</span>
+          </div>
+        </div>
+        <div class="arch-side">
+          <p>Mobile app → AWS S3, through presigned URLs</p>
+          <p>FastAPI ↔ Redis for sessions and Taskiq</p>
+        </div>
+        <div class="stacks">
+          <div>
+            <h3>Client</h3>
+            <p>Expo · React Native · TypeScript · Expo Router · Feature-Sliced Design · NativeWind · TanStack Query · Zustand · expo-audio · expo-secure-store</p>
+          </div>
+          <div>
+            <h3>Backend</h3>
+            <p>Python 3.12 · FastAPI · Uvicorn · SQLAlchemy · asyncpg · Dishka · Alembic · Argon2 · boto3</p>
+          </div>
+          <div>
+            <h3>Data</h3>
+            <p>PostgreSQL + PostGIS · Redis · Taskiq · AWS S3 presigned uploads · Docker&nbsp;Compose</p>
+          </div>
+        </div>
+        <p class="arch-note">
+          Production-style monorepo. Feature-Sliced Design on the client, DDD and Clean
+          Architecture on the backend. Ranking is TF-IDF cosine similarity plus collaborative
+          filtering. Sessions live in Redis.
+        </p>
+      </section>
+
+      <footer class="footer">
+        <div class="qr-card">
+          <p class="eyebrow">Landing page</p>
+          <img src="assets/qr-product.png" alt="QR code for the TappedIn landing page" width="640" height="640" />
+          <strong>Waiting list</strong>
+          <a href="https://tappedin.prdbox.me/">https://tappedin.prdbox.me/</a>
+        </div>
+        <div class="qr-card">
+          <p class="eyebrow">Source code</p>
+          <img src="assets/qr-github.png" alt="QR code for the TappedIn source code on GitHub" width="640" height="640" />
+          <strong>View source code</strong>
+          <a href="https://github.com/shstr0v/tapped.in?tab=readme-ov-file">https://github.com/shstr0v/tapped.in</a>
+        </div>
+        <div class="person">
+          <p class="eyebrow">Built &amp; designed by</p>
+          <div class="person-name">Mikhail Shesterov</div>
+          <p>17 y.o. · Nizhny Novgorod, Russia</p>
+          <p>Product, full-stack development, and the complete UI/UX.</p>
+        </div>
+      </footer>
+    </article>
+  </body>
+</html>

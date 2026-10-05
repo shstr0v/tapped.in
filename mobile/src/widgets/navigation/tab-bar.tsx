@@ -21,6 +21,7 @@ const HIDDEN_ROUTES = new Set([
   "my-profile",
   "connections",
   "edit-profile",
+  "upload-beat",
   "chat/[id]",
 ]);
 

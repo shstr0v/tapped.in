@@ -22,6 +22,7 @@ from vnu.domain.exceptions.music import (
     InvalidMusicUploadError,
 )
 from vnu.presentation.http.routers.auth import router as auth_router
+from vnu.presentation.http.routers.beats import router as beats_router
 from vnu.presentation.http.routers.connections import router as connections_router
 from vnu.presentation.http.routers.conversations import router as conversations_router
 from vnu.presentation.http.routers.feedback import router as feedback_router
@@ -38,6 +39,7 @@ def include_routers(app: FastAPI) -> None:
     app.include_router(users_router)
     app.include_router(profiles_router)
     app.include_router(uploads_router)
+    app.include_router(beats_router)
     app.include_router(recommendations_router)
     app.include_router(swipes_router)
     app.include_router(connections_router)

@@ -56,6 +56,10 @@ class MusicRepository(Protocol):
         raise NotImplementedError
 
     @abstractmethod
+    async def save_upload(self, upload: MusicUpload) -> MusicUploadDTO:
+        raise NotImplementedError
+
+    @abstractmethod
     async def delete_upload(self, upload_id: UUID, profile_id: UUID) -> bool:
         raise NotImplementedError
 

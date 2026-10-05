@@ -116,6 +116,32 @@ class MusicRepositoryImpl(MusicRepository):
         await self.session.flush(objects=[upload_model])
         return self.dao.to_upload_dto(upload_model)
 
+    async def save_upload(self, upload: MusicUpload) -> MusicUploadDTO:
+        if upload.is_featured:
+            await self.session.execute(
+                update(MusicUploadModel)
+                .where(
+                    MusicUploadModel.profile_id == upload.profile_id,
+                    MusicUploadModel.is_featured.is_(True),
+                )
+                .values(is_featured=False)
+            )
+        upload_model = MusicUploadModel(
+            id=upload.id,
+            profile_id=upload.profile_id,
+            audio_url=upload.audio_url,
+            title=upload.title,
+            genre=upload.genre,
+            tags=upload.tags,
+            bpm=upload.bpm,
+            description=upload.description,
+            is_featured=upload.is_featured,
+            created_at=upload.created_at,
+        )
+        self.session.add(upload_model)
+        await self.session.flush(objects=[upload_model])
+        return self.dao.to_upload_dto(upload_model)
+
     async def delete_upload(self, upload_id: UUID, profile_id: UUID) -> bool:
         result = await self.session.execute(
             delete(MusicUploadModel)

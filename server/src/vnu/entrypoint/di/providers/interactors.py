@@ -6,6 +6,7 @@ from vnu.application.interactors.auth.phone_login import PhoneLogin
 from vnu.application.interactors.auth.phone_login_verify import PhoneLoginVerify
 from vnu.application.interactors.music import (
     AcceptConnection,
+    CreateBeat,
     CreateFeaturedUpload,
     CreateFeedback,
     DeleteUpload,
@@ -33,6 +34,7 @@ class InteractorsProvider(Provider):
         PhoneLoginVerify,
         SendOtp,
         AcceptConnection,
+        CreateBeat,
         CreateFeaturedUpload,
         CreateFeedback,
         DeleteUpload,

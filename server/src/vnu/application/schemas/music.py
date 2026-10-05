@@ -1,7 +1,7 @@
-from typing import Self
+from typing import Annotated, Literal, Self
 from uuid import UUID
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from vnu.application.dto.music import MusicIdentityInputDTO, SendMessageDTO, SocialLinkInputDTO
 from vnu.domain.entities.music.enums import (
@@ -75,10 +75,39 @@ class CreateFeaturedUploadRequest(BaseModel):
     description: str | None = None
 
 
+class CreateBeatRequest(BaseModel):
+    title: str = Field(min_length=1, max_length=120)
+    audio_key: str = Field(min_length=1, max_length=1024)
+    genre: str | None = Field(default=None, max_length=80)
+    tags: list[Annotated[str, Field(max_length=40)]] = Field(default_factory=list, max_length=16)
+    bpm: int | None = Field(default=None, ge=1, le=400)
+    description: str | None = Field(default=None, max_length=500)
+
+    @field_validator("title")
+    @classmethod
+    def strip_title(cls, value: str) -> str:
+        stripped = value.strip()
+        if not stripped:
+            message = "Title is required."
+            raise ValueError(message)
+        return stripped
+
+    @field_validator("genre", "description")
+    @classmethod
+    def strip_optional(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        stripped = value.strip()
+        return stripped or None
+
+
 class CreatePresignedUploadRequest(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
     content_type: str
-    file_name: str
+    file_name: str = Field(validation_alias=AliasChoices("file_name", "filename"))
     folder: str = "uploads"
+    upload_type: Literal["audio", "avatar", "beat"] | None = None
 
 
 class PresignedUploadResponse(BaseModel):

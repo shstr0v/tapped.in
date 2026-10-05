@@ -19,3 +19,16 @@ export type CreateFeaturedUploadRequest = {
   tags?: string[];
   title: string;
 };
+
+export type Beat = MusicUpload & {
+  audio_key: string | null;
+  owner_id: string;
+};
+
+export type CreateBeatRequest = {
+  audio_key: string;
+  description?: string | null;
+  genre?: string | null;
+  tags?: string[];
+  title: string;
+};

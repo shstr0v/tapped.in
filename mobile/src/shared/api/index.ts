@@ -1,5 +1,6 @@
 export { ApiError, apiRequest } from "./http-client";
 export { authApi } from "./endpoints/auth";
+export { beatsApi } from "./endpoints/beats";
 export { connectionsApi } from "./endpoints/connections";
 export { conversationsApi } from "./endpoints/conversations";
 export { feedbackApi } from "./endpoints/feedback";

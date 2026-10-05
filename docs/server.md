@@ -153,7 +153,7 @@ class SwipeProfile(Interactor[SwipeInputDTO, SwipeDTO]):
         return SwipeDTO(...)
 ```
 
-Music interactors (`application/interactors/music/`): `UpsertMyMusicProfile`, `UpdateMyMusicProfile`, `CreateFeaturedUpload`, `DeleteUpload`, `SwipeProfile`, `RequestConnection`, `AcceptConnection`, `RejectConnection`, `CreateFeedback`, `MarkNotificationRead`, and direct messages: `OpenConversation`, `SendMessage`, `MarkConversationRead`. Auth/user interactors: `SignUp`, `EmailLogin`, `PhoneLogin`, `PhoneLoginVerify`, `Logout`, `VerifyPhone`, `CompleteUser`, `UpdateUser`, `GetByUsername`, `SendOtp`. Command: `CreateGuestCommand`.
+Music interactors (`application/interactors/music/`): `UpsertMyMusicProfile`, `UpdateMyMusicProfile`, `CreateFeaturedUpload`, `CreateBeat`, `DeleteUpload`, `SwipeProfile`, `RequestConnection`, `AcceptConnection`, `RejectConnection`, `CreateFeedback`, `MarkNotificationRead`, and direct messages: `OpenConversation`, `SendMessage`, `MarkConversationRead`. Auth/user interactors: `SignUp`, `EmailLogin`, `PhoneLogin`, `PhoneLoginVerify`, `Logout`, `VerifyPhone`, `CompleteUser`, `UpdateUser`, `GetByUsername`, `SendOtp`. Command: `CreateGuestCommand`.
 
 ### Queries (reads)
 
@@ -169,7 +169,7 @@ async def __call__(self, data: RecommendationFiltersDTO) -> list[RecommendationC
     return sorted(cards, key=lambda card: card.match.score, reverse=True)[: data.limit]
 ```
 
-Queries: `GetMyMusicProfile`, `GetMusicProfileById`, `GetRecommendationFeed`, `GetRecommendationScore`, `ListSavedProfiles`, `ListConnections`, `ListMyUploads`, `ListReceivedFeedback`, `ListNotifications`, `ListConversations`, `ListMessages`, `GetMe`.
+Queries: `GetMyMusicProfile`, `GetMusicProfileById`, `GetRecommendationFeed`, `GetRecommendationScore`, `ListSavedProfiles`, `ListConnections`, `ListMyUploads`, `ListMyBeats`, `GetBeat`, `ListReceivedFeedback`, `ListNotifications`, `ListConversations`, `ListMessages`, `GetMe`.
 
 ### Domain model
 
@@ -177,7 +177,7 @@ Entities are dataclasses with factory methods (`MusicProfile.create`, `MusicUplo
 
 - `MusicProfile` - role, artist name, location, experience, bio, collaboration status, optional `MusicIdentity`.
 - `MusicIdentity` - genres, influences, type beats, moods, BPM range (rejects `bpm_min > bpm_max`).
-- `MusicUpload` - featured audio metadata; creating a featured upload replaces the previous one (exactly one per profile).
+- `MusicUpload` - audio metadata for a profile. A featured upload still replaces the previous featured file. A submitted beat (`POST /beats`) is another upload: the newest one becomes the featured preview, and older uploads stay so existing feedback keeps its target.
 - `Swipe` - `skip | like | save` with the match score at action time; self-swipes are rejected.
 - `Connection` - `pending -> accepted | rejected`; only the receiver can accept/reject a pending request.
 - `Feedback`, `Notification` - structured feedback and minimal notifications.
@@ -281,10 +281,13 @@ All routers are registered in `presentation/http/common.py`. Auth is required un
 | `GET /users/by-username/{username}` | Look up user by username |
 | `GET /profiles/me`, `POST /profiles/me`, `PATCH /profiles/me` | Read / create-or-complete / update music profile, identity and socials |
 | `GET /profiles/{profile_id}` | Public profile details |
-| `POST /uploads/presigned-url` | S3 presigned PUT URL for audio/avatar |
+| `POST /uploads/presigned-url`, `POST /uploads/presigned` | S3 presigned PUT URL. `upload_type=beat` or `audio` requires auth, allows `audio/mpeg`, `audio/wav`, `audio/x-wav`, `audio/mp4`, `audio/aac`, and returns a key under `beats/{user_id}/`. Other uploads keep the client `folder`. |
 | `POST /uploads/featured` | Create or replace featured upload |
 | `GET /uploads/me` | My uploads |
 | `DELETE /uploads/{upload_id}` | Delete upload |
+| `POST /beats` | Create a beat from an owned `audio_key` (title, optional genre, tags, bpm, description). Owner comes from the session. |
+| `GET /beats/me` | Current user's beats, newest first, with a resolved audio URL and owner |
+| `GET /beats/{beat_id}` | One playable beat. Its `id` is the upload id used by `POST /feedback` and the feed preview. |
 | `GET /recommendations/feed?role=&genre=&location=&limit=` | Feed cards with match score (`limit` 1-50, default 10) |
 | `GET /recommendations/{profile_id}/score` | Score breakdown |
 | `POST /recommendations/{profile_id}/send-request` | Shortcut for a `like` swipe |
