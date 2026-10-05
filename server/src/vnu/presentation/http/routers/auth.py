@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Request, Response, status
+from typing import Any
+
 from dishka.integrations.fastapi import FromDishka, inject
-from pydantic import BaseModel
+from fastapi import APIRouter, Request, Response, status
 
 from vnu.application.dto.auth import EmailLoginDTO, PhoneLoginDTO, PhoneLoginVerifyDTO
 from vnu.application.dto.user import SignUpDTO, VerifyPhoneDTO
@@ -9,42 +10,17 @@ from vnu.application.interactors.auth.logout import Logout
 from vnu.application.interactors.auth.phone_login import PhoneLogin
 from vnu.application.interactors.auth.phone_login_verify import PhoneLoginVerify
 from vnu.application.interactors.user import SignUp, VerifyPhone
-from vnu.domain.entities.user.enum import UserGenderEnum
+from vnu.application.schemas.auth import (
+    EmailLoginRequest,
+    PhoneLoginRequest,
+    PhoneLoginVerifyRequest,
+    SignUpRequest,
+    VerifyPhoneRequest,
+)
 
 SID_COOKIE = "sid"
 
 router = APIRouter(prefix="/auth", tags=["auth"])
-
-
-class PhoneLoginRequest(BaseModel):
-    phone: str
-
-
-class PhoneLoginVerifyRequest(BaseModel):
-    phone: str
-    code: str
-
-
-class EmailLoginRequest(BaseModel):
-    email: str
-    password: str
-
-
-class SignUpRequest(BaseModel):
-    email: str
-    phone: str
-    age: int
-    gender: UserGenderEnum
-    first_name: str
-    last_name: str
-    password: str
-    telegram_id: int | None = None
-    username: str | None = None
-    avatar_url: str | None = None
-
-
-class VerifyPhoneRequest(BaseModel):
-    code: str
 
 
 @router.post("/phone/login")
@@ -52,7 +28,7 @@ class VerifyPhoneRequest(BaseModel):
 async def phone_login(
     data: PhoneLoginRequest,
     interactor: FromDishka[PhoneLogin],
-):
+) -> Any:
     return await interactor(PhoneLoginDTO(phone=data.phone))
 
 
@@ -63,7 +39,7 @@ async def phone_login_verify(
     request: Request,
     response: Response,
     interactor: FromDishka[PhoneLoginVerify],
-):
+) -> Any:
     result = await interactor(
         PhoneLoginVerifyDTO(
             phone=data.phone,
@@ -82,7 +58,7 @@ async def email_login(
     request: Request,
     response: Response,
     interactor: FromDishka[EmailLogin],
-):
+) -> Any:
     result = await interactor(
         EmailLoginDTO(
             email=str(data.email),
@@ -101,7 +77,7 @@ async def sign_up(
     request: Request,
     response: Response,
     interactor: FromDishka[SignUp],
-):
+) -> Any:
     result = await interactor(
         SignUpDTO(
             email=str(data.email),
@@ -126,7 +102,7 @@ async def sign_up(
 async def verify_phone(
     data: VerifyPhoneRequest,
     interactor: FromDishka[VerifyPhone],
-):
+) -> Any:
     return await interactor(VerifyPhoneDTO(code=data.code))
 
 

@@ -1,0 +1,35 @@
+services:
+  mobile:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: dev
+    container_name: mobile
+    restart: on-failure
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      - CI=0
+      - EXPO_NO_TELEMETRY=1
+      - EXPO_ROUTER_APP_ROOT=app
+      # URL baked into the JS bundle. It is used by the app on the HOST/device,
+      # not by the container, so it must be reachable from there:
+      #   iOS simulator / web  -> http://localhost:8000
+      #   Android emulator     -> http://10.0.2.2:8000
+      #   physical device      -> http://<your-LAN-IP>:8000
+      - EXPO_PUBLIC_API_URL=${EXPO_PUBLIC_API_URL:-http://localhost:8000}
+      # Address advertised to Expo Go / simulators in the QR code (the LAN IP of the host
+      # for a physical device, localhost for simulators).
+      - REACT_NATIVE_PACKAGER_HOSTNAME=${REACT_NATIVE_PACKAGER_HOSTNAME:-localhost}
+    ports:
+      - ${MOBILE_PORT:-8081}:8081
+    # Expo CLI prints the QR code and accepts keyboard shortcuts on a TTY.
+    tty: true
+    stdin_open: true
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:8081/status').then(r=>r.text()).then(t=>process.exit(t.includes('running')?0:1)).catch(()=>process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s

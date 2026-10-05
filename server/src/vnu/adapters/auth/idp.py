@@ -49,8 +49,15 @@ class SessionIdProvider(IdProvider):
         self.request = request
         self.session_service = session_service
         
+    def _parse_bearer(self) -> str | None:
+        header = self.request.headers.get(TOKEN_HEADER)
+        if header is None:
+            return None
+        token_type, _, token = header.partition(" ")
+        return token if token_type == TOKEN_TYPE and token else None
+
     def _parse_sid(self) -> str | None:
-        return self.request.cookies.get(COOKIE_KEY)
+        return self.request.cookies.get(COOKIE_KEY) or self._parse_bearer()
 
     async def get_current_id(self) -> UserId:
         try:

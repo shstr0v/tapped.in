@@ -1,36 +1,16 @@
-from fastapi import APIRouter, status
+from typing import Any
+
 from dishka.integrations.fastapi import FromDishka, inject
-from pydantic import BaseModel
+from fastapi import APIRouter, status
 
 from vnu.application.commands.user import CreateGuestCommand, CreateGuestCommandDTO
 from vnu.application.dto.user import GetUserWithUsernameDTO, UpdateUserDTO
 from vnu.application.interactors.user import CompleteUser, GetByUsername, UpdateUser
 from vnu.application.interactors.user.complete import CompleteUserDTO
 from vnu.application.queries.user import GetMe
-from vnu.domain.entities.user.enum import UserGenderEnum
+from vnu.application.schemas.user import CompleteUserRequest, CreateGuestRequest, UpdateUserRequest
 
 router = APIRouter(prefix="/users", tags=["users"])
-
-
-class CreateGuestRequest(BaseModel):
-    email: str | None = None
-
-
-class CompleteUserRequest(BaseModel):
-    username: str
-    avatar_url: str | None = None
-    first_name: str
-    last_name: str | None = None
-    gender: UserGenderEnum
-    age: int
-
-
-class UpdateUserRequest(BaseModel):
-    username: str
-    first_name: str
-    gender: UserGenderEnum
-    last_name: str | None = None
-    avatar_url: str | None = None
 
 
 @router.post("/guest", status_code=status.HTTP_201_CREATED)
@@ -38,13 +18,13 @@ class UpdateUserRequest(BaseModel):
 async def create_guest(
     data: CreateGuestRequest,
     command: FromDishka[CreateGuestCommand],
-):
+) -> Any:
     return await command(CreateGuestCommandDTO(email=data.email))
 
 
 @router.get("/me")
 @inject
-async def get_me(query: FromDishka[GetMe]):
+async def get_me(query: FromDishka[GetMe]) -> Any:
     return await query()
 
 
@@ -53,7 +33,7 @@ async def get_me(query: FromDishka[GetMe]):
 async def update_me(
     data: UpdateUserRequest,
     interactor: FromDishka[UpdateUser],
-):
+) -> Any:
     return await interactor(
         UpdateUserDTO(
             username=data.username,
@@ -70,7 +50,7 @@ async def update_me(
 async def complete_me(
     data: CompleteUserRequest,
     interactor: FromDishka[CompleteUser],
-):
+) -> Any:
     return await interactor(
         CompleteUserDTO(
             username=data.username,
@@ -88,5 +68,5 @@ async def complete_me(
 async def get_by_username(
     username: str,
     interactor: FromDishka[GetByUsername],
-):
+) -> Any:
     return await interactor(GetUserWithUsernameDTO(username=username))

@@ -42,13 +42,13 @@ services:
       - 5433:5432
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./.config/common/postgresql/init.sql:/docker-entrypoint-initdb.d/init.sql
     restart: always
     environment:
+      - POSTGRES_DB=${DB_NAME}
       - POSTGRES_PASSWORD=${DB_PASSWORD}
       - POSTGRES_USER=${DB_USER}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 1s
       timeout: 5s
       retries: 10
@@ -64,7 +64,7 @@ services:
       - appnet
     command: redis-server --bind 0.0.0.0 --requirepass "$REDIS_PASSWORD" --appendonly yes --appendfsync everysec
     healthcheck:
-      test: ["CMD-SHELL", "redis-cli ping | grep PONG"]
+      test: ["CMD-SHELL", "redis-cli -a \"$REDIS_PASSWORD\" ping | grep PONG"]
       interval: 1s
       timeout: 5s
       retries: 10

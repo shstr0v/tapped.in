@@ -1,7 +1,25 @@
 from vnu.adapters.data.models.base import Base
+from vnu.adapters.data.models.music import (
+    ConnectionModel,
+    FeedbackModel,
+    MusicIdentityModel,
+    MusicProfileModel,
+    MusicUploadModel,
+    NotificationModel,
+    SocialLinkModel,
+    SwipeModel,
+)
 from vnu.adapters.data.models.user import UserModel
 
 __all__ = [
     "Base",
+    "ConnectionModel",
+    "FeedbackModel",
+    "MusicIdentityModel",
+    "MusicProfileModel",
+    "MusicUploadModel",
+    "NotificationModel",
+    "SocialLinkModel",
+    "SwipeModel",
     "UserModel",
 ]

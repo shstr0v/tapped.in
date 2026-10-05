@@ -1,6 +1,7 @@
 from importlib import import_module
 
 _EXPORTS = {
+    "MusicRepositoryImpl": "vnu.adapters.data.repository.music",
     "OtpRepositoryImpl": "vnu.adapters.data.repository.otp",
     "UserRepositoryImpl": "vnu.adapters.data.repository.user",
 }

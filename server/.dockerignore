@@ -1,0 +1,17 @@
+# Local artefacts that must never end up in the image
+.venv/
+.git/
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.idea/
+.vscode/
+
+# Secrets are injected through `env_file` / `environment`, not baked into the image.
+# (vnu.adapters.config calls load_dotenv(override=True), so a baked-in .env would
+# silently override the container environment.)
+.env
+.env.*
+!.env.example

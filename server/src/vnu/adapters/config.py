@@ -7,6 +7,11 @@ from dotenv import load_dotenv
 load_dotenv(override=True)
 
 
+DEFAULT_CORS_ORIGINS = (
+    "http://localhost:8081,http://127.0.0.1:8081,http://localhost:19006,http://localhost:5173"
+)
+
+
 def _is_running_in_docker() -> bool:
     return os.path.exists("/.dockerenv") or os.getenv("RUNNING_IN_DOCKER") == "1"
 
@@ -91,6 +96,7 @@ class Config:
     mailchimp: MailchimpConfig
     redis: RedisConfig
     sms: SmsConfig
+    cors_origins: tuple[str, ...]
 
     @classmethod
     def load_from_environment(cls) -> Self:
@@ -143,5 +149,8 @@ class Config:
             sms=SmsConfig(
                 api_key=os.getenv("BREVO_SMS_API_KEY", ""),
                 base_url="https://api.brevo.com/v3/",
+            ),
+            cors_origins=tuple(
+                origin.strip() for origin in os.getenv("CORS_ORIGINS", DEFAULT_CORS_ORIGINS).split(",") if origin.strip()
             ),
         )

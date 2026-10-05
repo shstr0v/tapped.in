@@ -1,0 +1,10 @@
+services:
+  mobile:
+    extends:
+      file: docker-compose.base.yml
+      service: mobile
+    volumes:
+      # Hot reload: mount the sources, keep container-installed dependencies.
+      - ./:/app
+      - /app/node_modules
+      - /app/.expo

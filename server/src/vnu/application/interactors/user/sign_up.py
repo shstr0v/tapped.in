@@ -1,3 +1,5 @@
+import logging
+
 from vnu.application.dto.user import (
     SignUpDTO,
     SignUpResponseDTO,
@@ -12,6 +14,9 @@ from vnu.application.common.otp.service import OtpService
 from vnu.application.common.auth.session import SessionService
 from vnu.application.dto.session import CreateSessionDTO
 from vnu.application.dto.otp import SendOtpDTO
+from vnu.application.errors.sms import SmsSendingError
+
+logger = logging.getLogger(__name__)
 
 
 class SignUp(Interactor[SignUpDTO, SignUpResponseDTO]):
@@ -49,7 +54,10 @@ class SignUp(Interactor[SignUpDTO, SignUpResponseDTO]):
             )
         )
         session = await self.session_service.create(CreateSessionDTO(user_id=user.id, user_agent=data.user_agent))
-        await self.otp_service.send(SendOtpDTO(user_id=user.id, phone=data.phone))
+        try:
+            await self.otp_service.send(SendOtpDTO(user_id=user.id, phone=data.phone))
+        except SmsSendingError:
+            logger.warning("Verification SMS was not delivered for user %s; sign up continues.", user.id)
         await self.uow.commit()
 
         return SignUpResponseDTO(sid=session.session, user=user)

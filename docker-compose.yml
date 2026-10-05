@@ -1,0 +1,17 @@
+# Root orchestration for the whole TappedIn stack:
+#   PostgreSQL (PostGIS) + Redis + backend (FastAPI + Alembic) + worker + scheduler + mobile (Expo / Metro)
+#
+#   docker compose up --build        # or: make up
+#
+# Each part keeps its own base/dev split (server/docker-compose.{base,dev}.yml and
+# mobile/docker-compose.{base,dev}.yml) and is pulled in with `include`.
+# `project_directory` makes relative paths (build context, volumes, env_file) and the
+# default `.env` used for ${VAR} interpolation resolve against the sub-project
+# (server/.env, mobile/.env) instead of the repo root, so both parts still work standalone.
+name: tappedin
+
+include:
+  - path: server/docker-compose.dev.yml
+    project_directory: server
+  - path: mobile/docker-compose.dev.yml
+    project_directory: mobile

@@ -1,6 +1,7 @@
 from importlib import import_module
 
 _EXPORTS = {
+    "MusicDAOImpl": "vnu.adapters.data.dao.music",
     "UserDAOImpl": "vnu.adapters.data.dao.user",
 }
 

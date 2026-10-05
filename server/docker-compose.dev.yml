@@ -13,8 +13,6 @@ services:
     extends:
       file: docker-compose.base.yml
       service: postgresql
-    volumes:
-      - ./.config/dev/postgresql/seed.sql:/docker-entrypoint-initdb.d/seed.sql
     networks:
       - appnet
 
